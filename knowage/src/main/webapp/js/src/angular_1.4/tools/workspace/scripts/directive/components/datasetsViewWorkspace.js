@@ -42,7 +42,7 @@ function datasetsController($scope, sbiModule_restServices, sbiModule_translate,
 		sbiModule_user, sbiModule_helpOnLine, $qbeViewer, toastr, sbiModule_i18n, kn_regex,driversExecutionService,urlBuilderService, $httpParamSerializer,sbiModule_download, tagsHandlerService){
 
 	$scope.maxSizeStr = maxSizeStr;
-
+	$scope.location == "workspace";
 	$scope.translate = sbiModule_translate;
 	$scope.i18n = sbiModule_i18n;
 
