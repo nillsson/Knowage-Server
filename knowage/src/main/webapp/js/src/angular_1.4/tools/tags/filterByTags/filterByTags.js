@@ -34,7 +34,7 @@
 	}]);
 
 		function filterTagsController($scope,tagsHandlerService,sbiModule_restServices,urlBuilderService,$timeout,$filter){
-			var tagLimit = 8;
+			var tagLimit = $scope.currentDatasetsTab != "catalog" ? 100 : 8;
 			$scope.tagsVisible = tagLimit;
 			$scope.colapsed = {};
 			$scope.colapsed.name = "tagsUp";
