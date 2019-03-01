@@ -981,7 +981,6 @@ function cockpitWidgetControllerFunction(
 	}
 
 	$scope.doEditWidget=function(initOnFinish){
-
 		var deferred;
 		if(initOnFinish){
 			deferred=$q.defer();
