@@ -114,7 +114,6 @@ public class MenuListJSONSerializerForREST implements Serializer {
 	private static final String HREF_USERS = "/restful-services/publish?PUBLISHER=/WEB-INF/jsp/tools/catalogue/usersManagement.jsp";
 
 	private static final String HREF_MANAGE_LOVS = "/restful-services/publish?PUBLISHER=/WEB-INF/jsp/tools/catalogue/lovsManagement.jsp";
-	private static final String HREF_CACHE_MANAGEMENT = "/restful-services/publish?PUBLISHER=/WEB-INF/jsp/tools/cache/cacheHome.jsp";
 	private static final String HREF_FUNCTIONS_CATALOG = "/restful-services/publish?PUBLISHER=/WEB-INF/jsp/tools/functionsCatalog/functionsCatalog.jsp";
 
 	private static final String HREF_TEMPLATE_MANAGEMENT = "/restful-services/publish?PUBLISHER=/WEB-INF/jsp/tools/servermanager/templateManagement.jsp";
@@ -332,8 +331,11 @@ public class MenuListJSONSerializerForREST implements Serializer {
 		List funcs = (List) userProfile.getFunctionalities();
 
 		String strActiveSignup = SingletonConfig.getInstance().getConfigValue("SPAGOBI.SECURITY.ACTIVE_SIGNUP_FUNCTIONALITY");
-		boolean activeSignup = (strActiveSignup.equalsIgnoreCase("true") ? true : false);
-		if (activeSignup && !userProfile.getUserUniqueIdentifier().toString().equalsIgnoreCase(SpagoBIConstants.PUBLIC_USER_ID)) {
+		boolean activeSignup = strActiveSignup.equalsIgnoreCase("true");
+		String securityServiceSupplier = SingletonConfig.getInstance().getConfigValue("SPAGOBI.SECURITY.USER-PROFILE-FACTORY-CLASS.className");
+		boolean isInternalSecurityServiceSupplier = securityServiceSupplier.equalsIgnoreCase("it.eng.spagobi.security.InternalSecurityServiceSupplierImpl");
+		boolean isPublicUser = userProfile.getUserUniqueIdentifier().toString().equalsIgnoreCase(SpagoBIConstants.PUBLIC_USER_ID);
+		if (isInternalSecurityServiceSupplier && !isPublicUser) {
 			// build myAccount
 			JSONObject myAccount = new JSONObject();
 
@@ -433,19 +435,6 @@ public class MenuListJSONSerializerForREST implements Serializer {
 			hierarchiesManagement.put(LINK_TYPE, "execDirectUrl");
 			hierarchiesManagement.put(FIRST_URL, contextName + HREF_HIERARCHIES_MANAGEMENT);
 			tempMenuList.put(hierarchiesManagement);
-		}
-
-		if (isAbleTo(SpagoBIConstants.CACHE_MANAGEMENT, funcs)) {
-			JSONObject cacheManagement = new JSONObject();
-			cacheManagement.put(ICON_CLS, "device_hub");
-			cacheManagement.put(TOOLTIP, messageBuilder.getMessage("menu.CacheManagement", locale));
-			cacheManagement.put(ICON_ALIGN, "top");
-			cacheManagement.put(SCALE, "large");
-			cacheManagement.put(TARGET, "_self");
-			cacheManagement.put(HREF, "javascript:execDirectUrl('" + contextName + HREF_CACHE_MANAGEMENT + "');");
-			cacheManagement.put(LINK_TYPE, "execDirectUrl");
-			cacheManagement.put(FIRST_URL, contextName + HREF_CACHE_MANAGEMENT);
-			tempMenuList.put(cacheManagement);
 		}
 
 		if (isAbleTo(SpagoBIConstants.FUNCTIONS_CATALOG_USAGE, funcs)) {

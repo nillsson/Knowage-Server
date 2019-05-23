@@ -715,7 +715,7 @@ public class MetaService extends AbstractSpagoBIResource {
 				try {
 					jpaMappingJarGenerator.generate(businessModel, outDir.toString(), isUpdatable, includeSources, new File(libDir), content.getFileModel());
 				} catch (GenerationException e) {
-					logger.error(e);
+					logger.error("Error while generating JPA jar file", e);
 					errors.addErrorKey("metaWeb.generation.generic.error");
 				}
 				logger.debug("Setting generic info on content");
@@ -778,6 +778,7 @@ public class MetaService extends AbstractSpagoBIResource {
 			String dataType = jsonData.getString("dataType");
 			String sourceTableName = jsonData.getString("sourceTableName");
 			Boolean editMode = jsonData.getBoolean("editMode");
+			String columnType = jsonData.optString("columnType");
 
 			BusinessModel bm = model.getBusinessModels().get(0);
 			BusinessColumnSet sourceBcs = bm.getBusinessTableByUniqueName(sourceTableName);
@@ -786,7 +787,13 @@ public class MetaService extends AbstractSpagoBIResource {
 				sourceBcs = bm.getBusinessViewByUniqueName(sourceTableName);
 			}
 			try {
-				CalculatedFieldDescriptor cfd = new CalculatedFieldDescriptor(name, expression, dataType, sourceBcs);
+				// CalculatedFieldDescriptor cfd = new CalculatedFieldDescriptor(name, expression, dataType, sourceBcs);
+				CalculatedFieldDescriptor cfd = new CalculatedFieldDescriptor();
+				cfd.setName(name);
+				cfd.setExpression(expression);
+				cfd.setDataType(dataType);
+				cfd.setBusinessColumnSet(sourceBcs);
+				cfd.setColumnType(columnType);
 				BusinessModelInitializer businessModelInitializer = new BusinessModelInitializer();
 				if (editMode) {
 					String uniquename = jsonData.getString("uniquename");
@@ -1041,6 +1048,32 @@ public class MetaService extends AbstractSpagoBIResource {
 		BusinessModelInitializer businessModelInitializer = new BusinessModelInitializer();
 		businessModelInitializer.addColumn(physicalColumn, currBM);
 
+		JSONObject jsonModel = createJson(model);
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode patch = JsonDiff.asJson(mapper.readTree(oldJsonModel.toString()), mapper.readTree(jsonModel.toString()));
+
+		return Response.ok(patch.toString()).build();
+	}
+
+	@POST
+	@Path("/moveBusinessColumn")
+	public Response moveBusinessColumn(@Context HttpServletRequest req) throws JsonProcessingException, SpagoBIException, IOException, JSONException {
+		JSONObject jsonRoot = RestUtilities.readBodyAsJSONObject(req);
+		Model model = (Model) req.getSession().getAttribute(EMF_MODEL);
+		JSONObject oldJsonModel = createJson(model);
+
+		applyDiff(jsonRoot, model);
+
+		JSONObject json = jsonRoot.getJSONObject("data");
+		String businessModelUniqueName = json.getString("businessModelUniqueName");
+		Integer index = json.getInt("index");
+		Integer direction = json.getInt("direction");
+
+		BusinessColumnSet currBM = model.getBusinessModels().get(0).getTableByUniqueName(businessModelUniqueName);
+		List<BusinessColumn> columns = currBM.getColumns();
+		BusinessColumn movingColumn = columns.get(index);
+		columns.remove(movingColumn);
+		columns.add(index + direction, movingColumn);
 		JSONObject jsonModel = createJson(model);
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode patch = JsonDiff.asJson(mapper.readTree(oldJsonModel.toString()), mapper.readTree(jsonModel.toString()));

@@ -16,9 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 (function() {
-	
 
-angular.module('filter_panel',['sbiModule'])
+
+angular.module('filter_panel',['sbiModule','olap.services'])
 .directive('filterPanel',function(sbiModule_config){
 	return{
 		restrict: "E",
@@ -26,14 +26,14 @@ angular.module('filter_panel',['sbiModule'])
 //		templateUrl: '/knowagewhatifengine/html/template/main/filter/filterPanel.html',
 		templateUrl: function(){
 	    	 return sbiModule_config.contextName+'/html/template/main/filter/filterPanel.html';
-	    	  
+
 	      },
 		controller: filterPanelController
 	}
 })
 
 .directive('topaxis',function(sbiModule_config){
-	
+
 	function link(scope,element,attrs){
 		scope.$watch(function(){
 			return element[0].offsetWidth;
@@ -43,7 +43,7 @@ angular.module('filter_panel',['sbiModule'])
 			if(scope.columns){
 				scope.topSliderNeeded = scope.columns.length > scope.maxCols? true : false;
 			}
-			
+
 		})
 	};
 	return{
@@ -53,7 +53,7 @@ angular.module('filter_panel',['sbiModule'])
 })
 
 .directive('leftaxis',function(sbiModule_config){
-	
+
 	function link(scope,element,attrs){
 		scope.$watch(function(){
 			return element[0].offsetHeight;
@@ -63,7 +63,7 @@ angular.module('filter_panel',['sbiModule'])
 			if(scope.rows){
 				scope.leftSliderNeeded = scope.rows.length > scope.maxRows? true : false;
 			}
-			
+
 		})
 	};
 	return{
@@ -73,7 +73,7 @@ angular.module('filter_panel',['sbiModule'])
 })
 
 .directive('filterpanel',function(sbiModule_config){
-	
+
 	function link(scope,element,attrs){
 		scope.$watch(function(){
 			return element[0].offsetWidth;
@@ -83,8 +83,11 @@ angular.module('filter_panel',['sbiModule'])
 			if(scope.filterCardList){
 				scope.shiftNeeded = scope.filterCardList.length >  scope.numVisibleFilters ? true
 						: false;
+
+				if(!scope.shiftNeeded)
+					scope.index = 0;
 			}
-			
+
 		})
 	};
 	return{
@@ -94,9 +97,9 @@ angular.module('filter_panel',['sbiModule'])
 })
 
 
-function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce, sbiModule_messaging, sbiModule_restServices, sbiModule_translate, sbiModule_config,sbiModule_docInfo, toastr ) {
-	
-	var visibleSelected = [];
+function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce, sbiModule_messaging, sbiModule_restServices, sbiModule_translate, sbiModule_config,sbiModule_docInfo, toastr, indexChangingService,hierarchyTreeService) {
+
+
 	var visibleSelectedTracker = [];
 	var filterFather;
 	var h;
@@ -104,20 +107,20 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 	var oldSelectedFilter="";
 	var hlght = false;
 	var selectedFlag = false;
-	
+
 	var cutArray = [12, 11, 10, 9, 6]; //array with maximum lengths for card
-	 
-	
-	
+
+
+
 	var typeMsgWarn =sbiModule_translate.load('sbi.common.warning');
 	$scope.loadingFilter = true;
 	$scope.filterPanelEmpty = sbiModule_translate.load('sbi.olap.execution.table.filter.empty');
-	
+
 	angular.element(document).ready(function() {
 		$scope.sendMdxQuery('null');
-		
+
 	});
-	
+
 //	$scope.$watch(function(){
 //		if(document.getElementById("leftaxis")){
 //			var size = document.getElementById("leftaxis").offsetHeight;
@@ -127,19 +130,28 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 //			//$scope.axisSizeSetup();
 //			checkShift();
 //	})
-	
+
 	// for designer parameters binding
 	$scope.adParams=[];
 	$scope.profileAttributes=[];
-	
+
 	$scope.lastSelectedFilter=undefined;
 	$scope.selectedAttribute= undefined;
 	$scope.bindMode=false;
 	$scope.isSlicer=true;
 	$scope.parametersLoaded= false;
-	
+
+	$scope.unSelectAll = function(tree){
+
+		hierarchyTreeService.setVisibilityForAll(tree,false);
+		tree[0].visible = true;
+		filterPlaceMemberOnAxis();
+		tree[0].visible = false;
+
+	}
+
 	$scope.parameterBindings=[];
-	
+
 	$scope.clearLoadedData = function(name){
 		for(var i=0; i< $scope.dataPointers.length; i++){
 			if(name == $scope.dataPointers[i]){
@@ -148,56 +160,38 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 				break;
 			}
 		}
-		var visibleSelected = [];
+
 		var visibleSelectedTracker = [];
 	};
-	
+
 	clearSelectedList = function(){
-		for(var i=0;i< visibleSelected.length;i++){
-			if(visibleSelected[i].id.indexOf(filterFather) == -1){
-				visibleSelected.splice(i,1);
-			}
-		}
+
 		for(var i=0;i<visibleSelectedTracker.length;i++){
 			if(visibleSelectedTracker[i].id == undefined || visibleSelectedTracker[i].id.indexOf(filterFather) == 1){
 				visibleSelectedTracker.splice(i,1);
 			}
 		}
 	};
-	
-	getVisibleService = function(un,axis){
-		var toSend = {
-			'hierarchy':un,
-			'axis':axis
-		}
-		var encoded = encodeURI('1.0/hierarchy/getvisible?SBI_EXECUTION_ID='+ JSsbiExecutionID);
-		sbiModule_restServices.promisePost
-		(encoded,"",toSend)
-		.then(function(response) {
-			visibleSelected = response.data;
-		}, function(response) {
-			//sbiModule_messaging.showErrorMessage("An error occured during search for filter", 'Error');
-		});
-	};
-	
+
+
+
 	/**
-	 * Dialogs  
+	 * Dialogs
 	 **/
 	//Function for opening dialogs for every axis
 	$scope.openFiltersDialogAsync = function(ev, filter, node, index) {
-	
+
 		$scope.clearLoadedData(filter.uniqueName);
-		visibleSelected = [];//check it
+
 		visibleSelectedTracker = [];//check it
 		$scope.searchText = "";
 		$scope.loadingFilter = true;
-		var x = {name:'Waiting...'};       
+		var x = {name:'Waiting...'};
 		$scope.data = [];
 		$scope.data.push(x);
-		
-		
+
+
 		if(filter.axis > -1){
-			getVisibleService(filter.selectedHierarchyUniqueName,filter.axis);
 			$scope.isSlicer=false;
 		}
 		$scope.filterDialogToolbarName = filter.caption;
@@ -205,9 +199,9 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 		$scope.activeaxis = filter.axis;
 		filterFather = filter.selectedHierarchyUniqueName;
 		h = filter.uniqueName;
-		
+
 		$scope.selectedAttribute= undefined;
-		
+
 		var loadHierarchy= true;
 		for (var i = 0; i < $scope.adParams.length; i++) {
 			if($scope.adParams[i].bindObj != null){
@@ -220,7 +214,7 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 			}
 			}
 		}
-		
+
 		for (var i = 0; i < $scope.profileAttributes.length; i++) {
 			if($scope.profileAttributes[i].bindObj != null){
 			if( $scope.profileAttributes[i].bindObj.filter.dimension === filter.uniqueName){
@@ -232,33 +226,33 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 			}
 			}
 		}
-		
+
             if(loadHierarchy){
 			$scope.getHierarchyMembersAsynchronus(filterFather, filter.axis, null,filter.id);
 			$scope.dataPointers.push(filterFather);
             }
-			
-        
-	
+
+
+
 		$scope.showDialog(ev,$scope.filterDial);
 
 		$scope.loadingFilter = false;
-		
+
 
 	};
-	
+
 	/**
-	 *Tree functionalities 
+	 *Tree functionalities
 	 **/
 	$scope.expandTreeAsync = function(item){
-		
+
 		if($scope.bindMode){
 			sbiModule_messaging.showWarningMessage(sbiModule_translate.load('sbi.olap.attributeBinding.warning'), 'Warning');
 		}else{
-		$scope.getHierarchyMembersAsynchronus(filterFather,$scope.activeaxis,item.uniqueName,item.id);	
+		$scope.getHierarchyMembersAsynchronus(filterFather,$scope.activeaxis,item.uniqueName,item.id);
 		}
 	};
-	
+
 	expandAsyncTree = function(d,dput,id){
 		for(var i = 0; i< d.length; i++){
 			if(d[i].id == id){
@@ -271,11 +265,11 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 					if(!d[i].leaf && d[i].children.length>0){
 						expandAsyncTree(d[i].children,dput,id);
 					}
-				}				
-			} 
+				}
+			}
 		}
 	};
-	
+
 	 /*service for placing member on axis**/
 	 $scope.putMemberOnAxis = function(fromAxis,member){
 		 $scope.members = [];
@@ -298,11 +292,11 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 				}
 			}, function(response) {
 				sbiModule_messaging.showErrorMessage(sbiModule_translate.load('sbi.olap.memberAxis.error'), 'Error');
-				
-			});	
+
+			});
 	}
-	
-	$scope.searchFilter = function(keyEvent){	
+
+	$scope.searchFilter = function(keyEvent){
 		if (!keyEvent || keyEvent.which === 13 ){
 			hlght = true;
 			var toSend = {
@@ -311,7 +305,7 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 				'name': $scope.searchText,
 				'showS':$scope.showSiblings
 			};
-			
+
 			var encoded = encodeURI('1.0/hierarchy/search?SBI_EXECUTION_ID='+ JSsbiExecutionID);
 			sbiModule_restServices.promisePost
 			(encoded,"",toSend)
@@ -324,7 +318,7 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 		}
 
 	};
-	
+
 	checkIfExists = function(data){
 		var exist = false;
 		for(var i = 0; i< $scope.dataPointers.length;i++){
@@ -332,16 +326,16 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 					exist = true;
 					$scope.loadedData[i] = data
 					$scope.data= $scope.loadedData[i];
-					
+
 			}
 		}
 		if(!exist){
 			$scope.data= data;
 			$scope.dataPointers.push(filterFather);
 		}
-			
+
 	};
-	
+
 	$scope.getHierarchyMembersAsynchronus = function(hierarchy,axis,node,id){
 		var toSend={
 			'hierarchy':hierarchy,
@@ -356,52 +350,31 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 			  if(node!=null){
 				  var shouldSearchVisible = true;
 				  expandAsyncTree($scope.data,response.data, id);
-					
+
 				  for(var j = 0; j< visibleSelectedTracker.length;j++){
 					if(visibleSelectedTracker[j].id == h  && visibleSelectedTracker[j].selected.length > 0)
 						shouldSearchVisible= false;
 					}
-			  }				  
+			  }
 			  else{
 				  checkIfExists(response.data);
 			  }
-			  
+
 		}, function(response) {
 			sbiModule_messaging.showErrorMessage(sbiModule_translate.load('sbi.olap.hierarchyGet.error'), 'Error');
-		});	
+		});
 	}
-	
-	//Called if row/column dimension is unselected
-	removeUnselected = function(id){
-		for(var i=0;i<visibleSelected.length;i++){
-			if(id == visibleSelected[i].id){
-				visibleSelected.splice(i,1);	
-			}
-		}
-		
-	};
-	
-	//in order to send correct object to service children property witch is used for tree representation must be removed
-	removeChildren = function(){
-		for(var i=0; i<visibleSelected.length;i++){
-			if(visibleSelected[i].children != undefined){
-				delete visibleSelected[i].children;
-			}
-			if(visibleSelected[i].collapsed != undefined){
-				delete visibleSelected[i].collapsed;
-			}
-		}
-	};
-	
+
+
 	//selecting filter (old selected filter is saved in order to leave interface consistent if user decide to cancel selection)
 	$scope.selectFilter = function(item){
 		console.log(item);
-	   
+
 		if( $scope.olapMode){
-			
+
 		   if(!$scope.bindMode && $scope.selectedAttribute){
 			$scope.bindMode=true;
-			//$scope.lastSelectedFilter=item; 
+			//$scope.lastSelectedFilter=item;
 			console.log($scope.selectedAttribute);
 			console.log($scope.data);
 			if($scope.selectedAttribute){
@@ -410,7 +383,7 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 			$scope.selectedAttribute.replace =sliceArray[0];
 			$scope.filterSelected[$scope.filterAxisPosition].dimension= sliceArray[0];
 			$scope.filterSelected[$scope.filterAxisPosition].replaceItem= item.name;
-			
+
 			}
 			var index= item.uniqueName.indexOf("["+item.name+"]");
 			var fatherUniqueName=item.uniqueName.substring(0,index-1);
@@ -419,11 +392,11 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 			replaceChildrenWithParameter($scope.data[0],item.uniqueName,$scope.selectedAttribute);
 			$scope.selectedAttribute.bindObj.tree=$scope.data;
 			}
-			
-			
-			
-		
-		
+
+
+
+
+
 		selectedFlag = true;
 		oldSelectedFilter = angular.copy($scope.filterSelected[$scope.filterAxisPosition]);//ex:$scope.filterAxisPosition
 		h = $scope.filterCardList[$scope.filterAxisPosition].uniqueName;
@@ -434,11 +407,11 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
     //		$scope.filterSelected[$scope.filterAxisPosition].caption = item.name;
 	//	}
 		$scope.filterSelected[$scope.filterAxisPosition].uniqueName = item.uniqueName;
-		
+
 		//$scope.filterSelected[$scope.filterAxisPosition].bindedAttribute= $scope.selectedAttribute;
 		//$scope.filterSelected[$scope.filterAxisPosition].bindedAttribute=angular.copy($scope.selectedAttribute);
 		//$scope.filterSelected[$scope.filterAxisPosition].dataTree=angular.copy($scope.data);
-		
+
 		console.log($scope.filterSelected[$scope.filterAxisPosition]);
 		   }else{
 			   if(!$scope.bindMode){
@@ -452,21 +425,21 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 				   sbiModule_messaging.showWarningMessage(sbiModule_translate.load('sbi.olap.attributeBindingSelection.warning'), 'Warning');
 			   }
 		   }
-		
+
 		}else {
-		
+
 			selectedFlag = true;
 			oldSelectedFilter = angular.copy($scope.filterSelected[$scope.filterAxisPosition]);//ex:$scope.filterAxisPosition
 			h = $scope.filterCardList[$scope.filterAxisPosition].uniqueName;
 			m = item.uniqueName;
 			$scope.filterSelected[$scope.filterAxisPosition].caption = item.name;
 			$scope.filterSelected[$scope.filterAxisPosition].uniqueName = item.uniqueName;
-			
+
 		}
-	    
-		
+
+
 	};
-	
+
 	function replaceChildrenWithParameter(node,name, parameter){
 		if(node.children){
 			for (var i = 0; i < node.children.length; i++) {
@@ -487,19 +460,19 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 				    node.children.push(pNode);
 				    break;
 				}else{
-					
+
 						for (var j = 0; j < node.children.length; j++) {
 							replaceChildrenWithParameter(node.children[j],name,parameter);
 						}
-				
+
 			}
 			}
-		
+
 		}
 	}
-	
 
-	
+
+
 	//Function for closing filter dialog (handling selected in order to leave interface in consistent state)
 	$scope.closeFiltersDialog = function() {
 
@@ -508,31 +481,31 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 				$scope.filterSelected[$scope.filterAxisPosition].caption = oldSelectedFilter.caption;
 				$scope.filterSelected[$scope.filterAxisPosition].uniqueName = oldSelectedFilter.uniqueName;
 				$scope.filterSelected[$scope.filterAxisPosition].bindedAttribute= undefined;
-			}				
+			}
 			else{
 				$scope.filterSelected[$scope.filterAxisPosition].caption = "...";
 				$scope.filterSelected[$scope.filterAxisPosition].uniqueName = "";
 				$scope.filterSelected[$scope.filterAxisPosition].bindedAttribute= undefined;
-			}				
-			
+			}
+
 			selectedFlag = false;
 			//$scope.bindMode=false;
-			
+
 		}
-		
+
 		if($scope.selectedAttribute){
 			$scope.selectedAttribute.replace='';
 			$scope.selectedAttribute.bindObj=null;
 			$scope.selectedAttribute=undefined;
 			}
-			
+
 		$scope.bindMode=false;
 		$scope.searchText = "";
 		hlght = false;
 		$scope.isSlicer=true;
-		$mdDialog.hide();		
+		$mdDialog.hide();
 	}
-	
+
 	$scope.filterDialogSave = function(){
 		if($scope.activeaxis == -1){
 			if($scope.selectedAttribute){
@@ -540,21 +513,29 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 				bind.filter=angular.copy($scope.filterSelected[$scope.filterAxisPosition]);
 				bind.attribute= angular.copy($scope.selectedAttribute);
 				bind.tree= angular.copy($scope.data);
-				
+
 				$scope.selectedAttribute.bindObj=bind;
 				$scope.parameterBindings.push(bind);
 			}
-			
-			filterSlice();	
+
+			filterSlice();
+			$mdDialog.hide();
 		}
 		else
-			filterPlaceMemberOnAxis();
-		$scope.bindMode=false;
-		selectedFlag = false;
-		$scope.isSlicer=true;
-		$mdDialog.hide();
+
+			if(hierarchyTreeService.isAnyVisible($scope.data)){
+				filterPlaceMemberOnAxis();
+				$scope.bindMode=false;
+				selectedFlag = false;
+				$scope.isSlicer=true;
+				$mdDialog.hide();
+			}else{
+
+				sbiModule_messaging.showErrorMessage(sbiModule_translate.load('sbi.olap.filtering.no.selected.members'))
+			}
+
 	}
-	
+
 	//Save action called from filters axis=-1
 	filterSlice = function(){
 		var toSend = {
@@ -562,9 +543,9 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 			'member':m,
 			'multi':false
 		};
-		
+
 		console.log(toSend);
-		
+
 		if(filterFather != undefined && m!= undefined){
 			var encoded = encodeURI('1.0/hierarchy/slice?SBI_EXECUTION_ID='+ JSsbiExecutionID);
 			sbiModule_restServices.promisePost
@@ -575,45 +556,31 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 				  $scope.filterSelected[$scope.filterAxisPosition].visible = true;//ex:$scope.filterAxisPosition
 			}, function(response) {
 				sbiModule_messaging.showErrorMessage(sbiModule_translate.load('sbi.generic.error'), 'Error');
-			});	
+			});
 		}
 	};
-	
+
 	//save action called from rows/columns axis=0/axis=1
 	filterPlaceMemberOnAxis = function(){
-		removeChildren();
+
 		clearSelectedList();
-		console.log("from pmona"+visibleSelected);
 		var encoded = encodeURI('1.0/axis/'+ $scope.activeaxis+ '/placeMembersOnAxis?SBI_EXECUTION_ID='+ JSsbiExecutionID);
 		sbiModule_restServices.promisePost
-		(encoded,"",visibleSelected)
+		(encoded,"",hierarchyTreeService.getVisibleMembers($scope.data))
 		.then(function(response) {
-			 visibleSelected = [];			
+
 			 $scope.handleResponse(response);
 		}, function(response) {
 			sbiModule_messaging.showErrorMessage(sbiModule_translate.load('sbi.olap.memberAxis.error'), 'Error');
-			
+
 		});
 	};
-		
-	//Called when checkbox is clicked in row/column on front end
-	$scope.checkboxSelected = function(data){
-		
-		data.visible = !data.visible;
-		
-		
-		if(data.visible){			
-			visibleSelected.push(data);
-		}
-		else{
-			removeUnselected(data.id)
-		}
-	}
-	
+
+
 	 /* service for moving hierarchies* */
 	$scope.moveHierarchies = function(axis, hierarchieUniqeName, newPosition,
 			direction, member) {
-		var toSend ={ 
+		var toSend ={
 				'axis':axis,
 				'hierarchy': hierarchieUniqeName,
 				'newPosition':newPosition,
@@ -630,20 +597,20 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 							sbiModule_messaging.showErrorMessage(sbiModule_translate.load('sbi.olap.hierarchyMove.error'), 'Error');
 						});
 	};
-	
+
 	$scope.highlight = function(name){
 		if(!hlght)
 			return false;
 		if(name.toLowerCase().indexOf($scope.searchSucessText.toLowerCase()) > -1)
 			return true;
 		else
-			return false		
-	};		
-			
-	$scope.showHideSearchOnFilters = function(){		
-		$scope.showSearchInput = !$scope.showSearchInput;		
+			return false
 	};
-	
+
+	$scope.showHideSearchOnFilters = function(){
+		$scope.showSearchInput = !$scope.showSearchInput;
+	};
+
 	$scope.hideAsyncTree = function(item){
 		if($scope.bindMode){
 			sbiModule_messaging.showWarningMessage(sbiModule_translate.load('sbi.olap.attributeBinding.warning'), 'Warning');
@@ -651,35 +618,35 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 		item.collapsed = false;
 		}
 	};
-	
+
 	/**
 	 * Drag and drop functionalities start
-	 **/	
+	 **/
 	$scope.dropTop = function(data, ev) {
 		var leftLength = $scope.rows.length;
 		var topLength = $scope.columns.length;
 		var fromAxis;
 		var pa;
-		
+
 		if(data!=null){
 			pa = data.positionInAxis;
 			fromAxis = data.axis;
-			
+
 			if(fromAxis == -1){
 				$scope.filterSelected[data.positionInAxis].caption ="...";
 				$scope.filterSelected[data.positionInAxis].visible =false;
-			}				
-			
+			}
+
 			if(fromAxis!=0){
 				if ($scope.draggedFrom == 'left' && leftLength == 1){
 					sbiModule_messaging.showWarningMessage(sbiModule_translate.load('sbi.olap.execution.table.dimension.no.enough'), typeMsgWarn);
-				}					
+				}
 				else {
 					data.positionInAxis = topLength;
 					data.axis = 0;
 
 					$scope.putMemberOnAxis(fromAxis,data);
-					
+
 				}
 			}
 		}
@@ -687,7 +654,7 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 			$scope.clearLoadedData(data.uniqueName);
 	};
 
-	
+
 	$scope.dropLeft = function(data, ev) {
 		var leftLength = $scope.rows.length;
 		var topLength = $scope.columns.length;
@@ -695,13 +662,13 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 		//$scope.axisSizeSetup();
 		if(data !=null){
 			fromAxis = data.axis;
-			
+
 			if(fromAxis == -1){
 				$scope.filterSelected[data.positionInAxis].caption ="...";
 				$scope.filterSelected[data.positionInAxis].visible =false;
-			}	
-			
-			if(fromAxis != 1){				
+			}
+
+			if(fromAxis != 1){
 				if ($scope.draggedFrom == 'top' && topLength == 1)
 					sbiModule_messaging.showWarningMessage(sbiModule_translate.load('sbi.olap.execution.table.dimension.no.enough'), typeMsgWarn);
 				else {
@@ -709,7 +676,7 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 					data.axis = 1;
 					$scope.putMemberOnAxis(fromAxis,data);
 				}
-				
+
 			}
 		}
 		if(data!= null)
@@ -720,17 +687,17 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 		var leftLength = $scope.rows.length;
 		var topLength = $scope.columns.length;
 		var fromAxis;
-		
+
 		if(data != null){
 			fromAxis = data.axis;
-			
+
 			if(data.measure){
 				sbiModule_messaging.showWarningMessage(sbiModule_translate.load('sbi.olap.execution.table.filter.no.measure'), typeMsgWarn);
 				return null;
 			}
-			
-			if(fromAxis!=-1){			
-				
+
+			if(fromAxis!=-1){
+
 				if ($scope.draggedFrom == 'left' && leftLength == 1)
 					sbiModule_messaging.showWarningMessage(sbiModule_translate.load('sbi.olap.execution.table.dimension.no.enough'), typeMsgWarn);
 				else if ($scope.draggedFrom == 'top' && topLength == 1)
@@ -738,10 +705,10 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 				else {
 					data.positionInAxis = $scope.filterCardList.length;
 					data.axis = -1;
-					
+
 					$scope.putMemberOnAxis(fromAxis,data);
 				}
-				
+
 				$scope.filterSelected[$scope.filterSelected.length] = {caption:"...",uniqueName:"",visible:false};
 			}
 		}
@@ -753,55 +720,35 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 		$scope.draggedFrom = df;
 		$scope.dragIndex = index;
 	};
-			
+
 	$scope.openFilters = function(ev) {
 		$mdDialog.show($mdDialog.alert().clickOutsideToClose(true).title(
 				sbiModule_translate.load('sbi.olap.filtering.info')).ok("ok").targetEvent(ev));
 	};
 
 	/**
-	 * Filter shift if necessary  
+	 * Filter shift if necessary
 	 **/
-	//Function for scrolling trough filters/rows/columns if necessary  
-	$scope.filterShift = function(direction) {
+	//Function for scrolling trough filters/rows/columns if necessary
+	$scope.filterShift = function(direction, index, array, numVisibleFilters) {
 
-		$scope.filterCardList = shift(direction,$scope.filterCardList);
-		$scope.filterSelected = shift(direction,$scope.filterSelected);
+		$scope.index = indexChangingService.changeIndexValue(direction, index, array, numVisibleFilters);
+
 	};
-	
-	shift = function(direction, data){
-		var length = data.length;
-		var first = data[0];
-		var last = data[length-1];
-		if(direction == "left"){
-			for (var i = 0; i < length; i++) {
-				data[i] = data[i + 1];
-			}
-			data[length - 1] = first;
-		}
-		else{
-			for (var i = length - 2; i >= 0; i--) {
-				data[i + 1] = data[i];
-			}
-			data[0] = last;
-		}
-		
-		return data;
-	};
-	
+
 	//setting visibility of shift buttons if needed
 //	checkShift = function(){
-//		
-//		
+//
+//
 //		$scope.shiftNeeded = $scope.filterCardList.length > $scope.numVisibleFilters ? true
 //				: false;
-//		
+//
 //		$scope.topSliderNeeded = $scope.columns.length > $scope.maxCols? true : false;
-//		
+//
 //		$scope.leftSliderNeeded = $scope.rows.length > $scope.maxRows? true : false;
 //	};
 
-	
+
 	$scope.sendMdxQuery = function(mdx) {
 		var encoded = encodeURI("1.0/model/?SBI_EXECUTION_ID="+JSsbiExecutionID)
 		sbiModule_restServices.promisePost(encoded,"",mdx)
@@ -810,48 +757,48 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 			//checkShift();
 			$mdDialog.hide();
 			$scope.mdxQuery = "";
-			
+
 			$scope.sendModelConfig($scope.modelConfig);
 			 checkLock(status);
 			if($scope.modelConfig.whatIfScenario)
 				$scope.getVersions();
 			//$scope.axisSizeSetup();
-			
+
 		}, function(response) {
 			sbiModule_messaging.showErrorMessage(sbiModule_translate.load('sbi.olap.sendMDX.error'), 'Error');
-			
-		});	
+
+		});
 	};
-	
-	//Function for styling of search text box 
+
+	//Function for styling of search text box
 	$scope.bgColor = function(){
 		if( $scope.searchText == "" || $scope.searchText.length>=  $scope.minNumOfLetters)
 			return false;
-		else	
+		else
 			return true;
 	};
-	
+
 	$scope.cutName = function(name, axis, multi){
 		var ind = axis;
 		if(multi)
 			ind = ind + 2;
-		
+
 		ind = ind+1;
-		
+
 		var cutProp = cutArray[ind];
-		
+
 		if(name == undefined){
 			name = oldSelectedFilter.caption;
 		}
-		
+
 		if(name.length <= cutProp)
 			return name;
 		else
 			return name.substring(0,cutProp)+"...";
-		
-		
+
+
 	};
-	
+
 
 
 	//Dynamic setting for number of visible elements in filter/row/column axis without scroll buttons
@@ -861,19 +808,19 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 //			var taw = document.getElementById("topaxis").offsetWidth - 66;
 //			$scope.maxCols = Math.round(taw/200);
 //		}
-//		
+//
 //		if(document.getElementById("leftaxis")){
 //			var lah = document.getElementById("leftaxis").offsetWidth - 66;
 //			$scope.maxRows = Math.round(lah/175);
 //		}
-//		
+//
 //		if(document.getElementById("filterpanel")){
 //			var faw = document.getElementById("filterpanel").offsetWidth - 80;
 //			$scope.numVisibleFilters = Math.round(faw/200);
 //		}
 //
 //	};
-	
+
 	$scope.loadAnalyticalDrivers= function(){
 		   console.log(sbiModule_docInfo);
 		   sbiModule_restServices
@@ -885,49 +832,49 @@ function filterPanelController($scope, $timeout, $window, $mdDialog, $http, $sce
 							     console.log(response.data);
 							     $scope.adParams=[];
 							     $scope.adParams=response.data.results;
-							     
+
 							     for (var i = 0; i < $scope.adParams.length; i++) {
 									$scope.adParams[i].replace = '';
 									$scope.adParams[i].bindObj= null;
 								}
-							    
+
 							},
 							function(response) {
 								sbiModule_messaging.showErrorMessage(sbiModule_translate.load('sbi.olap.ad.error'), 'Error');
 							});
-		   
-		   
-		   
+
+
+
 	   }
-	   
+
 	   if(mode == 'edit'){
 	   $scope.loadAnalyticalDrivers();
 	   }
-	   
+
 	   $scope.loadProfileAttributes= function (){
-		   
+
 		   sbiModule_restServices
 			.alterContextPath("/knowage");
 		   sbiModule_restServices.promiseGet("2.0/attributes", "")
 					.then(
 							function(response) {
-								
-							     
+
+
 							    $scope.profileAttributes= response.data;
-							    
+
 							    for (var i = 0; i < $scope.profileAttributes.length; i++) {
 									$scope.profileAttributes[i].replace = '';
 									$scope.profileAttributes[i].bindObj= null;
 								}
-							    
-							    
+
+
 							},
 							function(response) {
 								sbiModule_messaging.showErrorMessage(sbiModule_translate.load('sbi.olap.profileAttributes.error'), 'Error');
 							});
-		   
+
 	   }
-	   
+
 	   if(mode == 'edit'){
 	   $scope.loadProfileAttributes();
 	   }

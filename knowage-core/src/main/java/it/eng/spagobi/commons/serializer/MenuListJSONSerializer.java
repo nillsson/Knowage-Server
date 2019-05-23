@@ -98,7 +98,6 @@ public class MenuListJSONSerializer implements Serializer {
 	private static final String HREF_MANAGE_GLOSSARY_TECHNICAL = "/restful-services/publish?PUBLISHER=/WEB-INF/jsp/tools/glossary/technicaluser/glossaryTechnical.jsp";
 	private static final String HREF_MANAGE_GLOSSARY_BUSINESS = "/restful-services/publish?PUBLISHER=/WEB-INF/jsp/tools/glossary/businessuser/glossaryBusiness.jsp";
 	private static final String HREF_MANAGE_CROSS_DEFINITION = "/restful-services/publish?PUBLISHER=/WEB-INF/jsp/tools/cross/definition/crossDefinition.jsp";
-	private static final String HREF_CACHE_MANAGEMENT = "/restful-services/publish?PUBLISHER=/WEB-INF/jsp/tools/cache/cacheHome.jsp";
 	private static final String HREF_FUNCTIONS_CATALOG = "/restful-services/publish?PUBLISHER=/WEB-INF/jsp/tools/functionsCatalog/functionsCatalog.jsp";
 
 	private static final String HREF_MANAGE_DOMAIN = "/restful-services/publish?PUBLISHER=/WEB-INF/jsp/tools/domain/domainManagement.jsp";
@@ -274,8 +273,11 @@ public class MenuListJSONSerializer implements Serializer {
 		List funcs = (List) userProfile.getFunctionalities();
 
 		String strActiveSignup = SingletonConfig.getInstance().getConfigValue("SPAGOBI.SECURITY.ACTIVE_SIGNUP_FUNCTIONALITY");
-		boolean activeSignup = (strActiveSignup.equalsIgnoreCase("true") ? true : false);
-		if (activeSignup && !userProfile.getUserUniqueIdentifier().toString().equalsIgnoreCase(SpagoBIConstants.PUBLIC_USER_ID)) {
+		boolean activeSignup = strActiveSignup.equalsIgnoreCase("true");
+		String securityServiceSupplier = SingletonConfig.getInstance().getConfigValue("SPAGOBI.SECURITY.USER-PROFILE-FACTORY-CLASS.className");
+		boolean isInternalSecurityServiceSupplier = securityServiceSupplier.equalsIgnoreCase("it.eng.spagobi.security.InternalSecurityServiceSupplierImpl");
+		boolean isPublicUser = userProfile.getUserUniqueIdentifier().toString().equalsIgnoreCase(SpagoBIConstants.PUBLIC_USER_ID);
+		if (isInternalSecurityServiceSupplier && !isPublicUser) {
 			// build myAccount
 			JSONObject myAccount = new JSONObject();
 
@@ -459,17 +461,6 @@ public class MenuListJSONSerializer implements Serializer {
 			lovsManagementTechnical.put(TARGET, "_self");
 			lovsManagementTechnical.put(HREF, "javascript:execDirectUrl('" + contextName + HREF_MANAGE_LOVS + "');");
 			tempMenuList.put(lovsManagementTechnical);
-		}
-
-		if (isAbleTo(SpagoBIConstants.CACHE_MANAGEMENT, funcs)) {
-			JSONObject cacheManagement = new JSONObject();
-			cacheManagement.put(ICON_CLS, "cache_management");
-			cacheManagement.put(TOOLTIP, messageBuilder.getMessage("menu.CacheManagement", locale));
-			cacheManagement.put(ICON_ALIGN, "top");
-			cacheManagement.put(SCALE, "large");
-			cacheManagement.put(TARGET, "_self");
-			cacheManagement.put(HREF, "javascript:execDirectUrl('" + contextName + HREF_CACHE_MANAGEMENT + "');");
-			tempMenuList.put(cacheManagement);
 		}
 
 		if (isAbleTo(SpagoBIConstants.FUNCTIONS_CATALOG_USAGE, funcs)) {

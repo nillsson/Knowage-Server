@@ -3,7 +3,7 @@ app.controller('documentBrowserController',
 		[ '$window','$mdMedia', '$scope', '$http', '$mdSidenav',
 		  '$mdDialog', 'sbiModule_translate', 'sbiModule_restServices',
 		  'sbiModule_config', 'setFocus','$timeout', '$cookies',
-		  'sbiModule_user','$interval','$q','sbiModule_i18n',documentBrowserFunction]);
+		  'sbiModule_user','$interval','$q','$filter','sbiModule_i18n',documentBrowserFunction]);
 
 
 
@@ -11,7 +11,7 @@ function documentBrowserFunction($window,
 		$mdMedia, $scope, $http, $mdSidenav,
 		$mdDialog, sbiModule_translate, sbiModule_restServices,
 		sbiModule_config, setFocus,$timeout, $cookies,
-		sbiModule_user,$interval,$q,sbiModule_i18n) {
+		sbiModule_user,$interval,$q,$filter,sbiModule_i18n) {
 
 	$scope.translate=sbiModule_translate;
 	$scope.i18n=sbiModule_i18n;
@@ -32,6 +32,7 @@ function documentBrowserFunction($window,
 	$scope.hideProgressCircular=true;
 	$scope.searchingDocuments=false;
 	$scope.lastSearchInputInserted = "";
+	$scope.imageServletUrl = sbiModule_config.contextName+"/servlet/AdapterHTTP?ACTION_NAME=MANAGE_PREVIEW_FILE_ACTION&SBI_ENVIRONMENT=DOCBROWSER&LIGHT_NAVIGATOR_DISABLED=TRUE&operation=DOWNLOAD&fileName=";
 
 	//$scope.defaultFolderId = defaultFolderId;
 	if(defaultFoldersId != undefined && defaultFoldersId != ''){
@@ -40,80 +41,102 @@ function documentBrowserFunction($window,
 	}
 
 	$scope.columns = [
-		{"headerName":"Type","field":"typeCode"},
-		{"headerName":"Name","field":"name"},
-		{"headerName":"Author","field":"creationUser"},
-		{"headerName":"Label","field":"viewLabel"},
+		{"headerName":$scope.translate.load('kn.documentbrowser.type'),"field":"typeCode"},
+		{"headerName":$scope.translate.load('kn.documentbrowser.name'),"field":"name"},
+		{"headerName":$scope.translate.load('kn.documentbrowser.author'),"field":"creationUser"},
 		{"headerName":"",cellRenderer: buttonRenderer,"field":"valueId","cellStyle":{"border":"none !important","text-align": "right","display":"inline-flex","justify-content":"flex-end"},
 			suppressSorting:true,suppressFilter:true,width: 50,suppressSizeToFit:true,suppressMovable:true}];
+	
+		if(eval(sbiModule_user.isAdminUser) || eval(sbiModule_user.isSuperAdmin) || eval(sbiModule_user.isTechnicalUser) || eval(sbiModule_user.isTesterUser)) {
+			$scope.columns.splice(2, 0, {"headerName":$scope.translate.load('kn.documentbrowser.label'),"field":"viewLabel"});
+			$scope.columns.splice(4, 0, {"headerName":$scope.translate.load('kn.documentbrowser.status'),"field":"stateCodeStr",cellRenderer: statusRenderer});
+			$scope.columns.splice(5, 0, {"headerName":$scope.translate.load('kn.documentbrowser.visible'),"field":"visible",cellRenderer: visibilityRenderer,"cellStyle":{"display":"inline-flex","justify-content":"center"},
+				suppressFilter:true,width: 100,suppressSizeToFit:true,suppressMovable:true});
+		}
 
 
-$scope.documentBrowserGrid = {
-		angularCompileRows: true,
-        enableColResize: false,
-        enableFilter: true,
-        enableSorting: true,
-        pagination: true,
-        paginationAutoPageSize: true,
-        onGridSizeChanged: resizeColumns,
-        onRowClicked: onSelectionChanged
-};
-
-$scope.searchResultGrid = {
-		angularCompileRows: true,
-		enableColResize: false,
-        enableFilter: false,
-        pagination: true,
-        paginationAutoPageSize: true,
-        onRowClicked: onSelectionChanged,
-        columnDefs : $scope.columns
-}
-
-$scope.documentBrowserGrid.onGridReady = function(){
-	$scope.documentBrowserGrid.api.setColumnDefs($scope.columns);
-		$scope.documentBrowserGrid.api.sizeColumnsToFit();
-}
-
-
-$scope.tableElement = angular.element(document.querySelectorAll(".documentBrowserGrid")[0]);
-
-$scope.$watch(function () {
-    return $scope.tableElement[0].clientWidth;
-   }, function(newVal, oldVal) {
-	   if(newVal!=oldVal){
-		   $scope.documentBrowserGrid.api.sizeColumnsToFit();
-		   if(newVal<600){
-			   $scope.openDocumentDetail = false;
-		   }
-	   }
-});
-
-function resizeColumns(){
-	$scope.documentBrowserGrid.api.sizeColumnsToFit();
-}
-
-function onSelectionChanged(node){
-	if($scope.selectedDocument == node.data){
-		node.node.setSelected(false,true);
-		$scope.selectedDocument = {};
-		$scope.openDocumentDetail = false;
-		$mdSidenav('right').close();
-		return;
-	}else{
-		node.node.setSelected(true,true);
-		$scope.openDocumentDetail = $scope.tableElement[0].clientWidth<600? false : true;
-		$scope.selectedDocument = node.data;
-		$mdSidenav('right').open();
+	$scope.documentBrowserGrid = {
+			angularCompileRows: true,
+	        enableColResize: false,
+	        enableFilter: true,
+	        enableSorting: true,
+	        pagination: true,
+	        paginationAutoPageSize: true,
+	        onGridSizeChanged: resizeColumns,
+	        onRowClicked: onSelectionChanged
+	};
+	
+	$scope.searchResultGrid = {
+			angularCompileRows: true,
+			enableColResize: false,
+	        enableFilter: false,
+	        pagination: true,
+	        paginationAutoPageSize: true,
+	        onRowClicked: onSelectionChanged,
+	        columnDefs : $scope.columns
 	}
-	$scope.$apply();
-}
-
- function buttonRenderer(params){
-	return 	'<md-button class="md-icon-button" ng-click="executeDoc(\''+params.data.id+'\',$event)">'+
-			'	<md-tooltip md-delay="500">'+$scope.translate.load('sbi.documentbrowser.execute')+'</md-tooltip>'+
-			'	<md-icon md-font-icon="fa fa-play-circle"></md-icon>'+
-			'</md-button>';
-}
+	
+	$scope.documentBrowserGrid.onGridReady = function(){
+		$scope.documentBrowserGrid.api.setColumnDefs($scope.columns);
+			$scope.documentBrowserGrid.api.sizeColumnsToFit();
+	}
+	
+	
+	$scope.tableElement = angular.element(document.querySelectorAll(".documentBrowserGrid")[0]);
+	
+	$scope.$watch(function () {
+	    return $scope.tableElement[0].clientWidth;
+	   }, function(newVal, oldVal) {
+		   if(newVal!=oldVal){
+			   $scope.documentBrowserGrid.api.sizeColumnsToFit();
+			   if(newVal<600){
+				   $scope.openDocumentDetail = false;
+			   }
+		   }
+	});
+	
+	function resizeColumns(){
+		var columnsToHideOnMobile = ['creationUser','viewLabel','visible'];
+		if(document.getElementsByClassName('mainContent')[0].clientWidth < 800){
+			$scope.documentBrowserGrid.columnApi.setColumnsVisible(columnsToHideOnMobile, false);
+		}else $scope.documentBrowserGrid.columnApi.setColumnsVisible(columnsToHideOnMobile, true);
+		
+		$scope.documentBrowserGrid.api.sizeColumnsToFit();
+	}
+	
+	function onSelectionChanged(node){
+		if($scope.selectedDocument == node.data){
+			node.node.setSelected(false,true);
+			$scope.selectedDocument = {};
+			$scope.openDocumentDetail = false;
+			$mdSidenav('right').close();
+			return;
+		}else{
+			node.node.setSelected(true,true);
+			$scope.openDocumentDetail = $scope.tableElement[0].clientWidth<600? false : true;
+			$scope.selectedDocument = node.data;
+			if($scope.selectedDocument.previewFile) $scope.tempPreviewSrc = $scope.imageServletUrl + $scope.selectedDocument.previewFile;
+			else{delete $scope.tempPreviewSrc}
+			$mdSidenav('right').open();
+		}
+		$scope.$apply();
+	}
+	
+	 function buttonRenderer(params){
+		return 	'<md-button class="md-icon-button" ng-click="executeDoc(\''+params.data.id+'\',$event)">'+
+				'	<md-tooltip md-delay="500">'+$scope.translate.load('sbi.documentbrowser.execute')+'</md-tooltip>'+
+				'	<md-icon md-font-icon="fa fa-play-circle"></md-icon>'+
+				'</md-button>';
+	}
+	 
+	 function statusRenderer(params){
+		 return $filter('translateLoad')(params.data.stateCodeStr);
+	 }
+	 
+	 function visibilityRenderer(params){
+		 return params.data.visible ? '<span class="fa-stack"><i class="fa fa-eye fa-stack-1x"><md-tooltip md-delay="500">'+$scope.translate.load('sbi.generic.visible')+'</md-tooltip></i></span>' 
+				 : '<span class="fa-stack"><i class="fa fa-eye fa-stack-1x"></i><i class="fa fa-ban fa-stack-2x"></i><md-tooltip md-delay="500">'+$scope.translate.load('sbi.generic.notvisible')+'</md-tooltip></span>';
+	 }
 
 	$scope.moveBreadCrumbToFolder=function(folder,index){
 		if(folder!=null){
@@ -190,10 +213,17 @@ function onSelectionChanged(node){
 		}
 	}
 
+	$scope.sortById = function(objects) {
+		objects.sort(function(a, b) {
+		    return (a.id - b.id);
+		})
+	}
+
 	$scope.loadFolders=function(){
 		sbiModule_restServices.promiseGet("2.0/folders", "")
 		.then(function(response) {
 			if(response.data && response.data.length>0){
+				$scope.sortById(response.data);
 				//check cookies configuration tree
 				var cookiesObj = 'breadCrumb_'+sbiModule_user.userId;
 				if($cookies.getObject(cookiesObj) && $cookies.getObject(cookiesObj).length>0){
@@ -212,6 +242,7 @@ function onSelectionChanged(node){
 							break;
 						}
 					}
+
 					//load folder
 					$timeout(function(){
 						$scope.loadFolderDocuments(folderToOpen.id);
@@ -305,10 +336,10 @@ function onSelectionChanged(node){
 			tmpDoc.url=url;
 			$scope.runningDocuments.push(tmpDoc);
 		}
-		
+
 
 	};
-	
+
 	$scope.executeDoc = function(id,e){
 		e.preventDefault();
 		e.stopImmediatePropagation();
@@ -340,7 +371,7 @@ function onSelectionChanged(node){
 			if (newSearchInput == $scope.searchInput) {
 				if (newSearchInput.length > 0){
 					$scope.searchingDocuments=true;
-					sbiModule_restServices.promiseGet("2.0", "documents?searchAttributes=all&searchKey=" + encodeURIComponent(newSearchInput + "*"))
+					sbiModule_restServices.promiseGet("2.0", "documents?searchAttributes=all&searchKey=" + encodeURIComponent(newSearchInput))
 					.then(function(response) {
 						$scope.searchDocuments = response.data;
 						$scope.translateDocuments($scope.searchDocuments);
@@ -399,7 +430,7 @@ function onSelectionChanged(node){
 		var deferred = $q.defer();
 		 $mdDialog.show({
  		      controller: DialogEditDocumentController,
- 		      templateUrl: sbiModule_config.contextName+'/js/src/angular_1.4/tools/documentbrowser/template/documentDialogIframeTemplate.jsp',
+ 		      templateUrl: sbiModule_config.dynamicResourcesBasePath+'/angular_1.4/tools/documentbrowser/template/documentDialogIframeTemplate.jsp',
  		      clickOutsideToClose:false,
  		      escapeToClose :false,
  		      fullscreen: true,
@@ -421,7 +452,7 @@ function onSelectionChanged(node){
 	$scope.newDocument=function(type){
 		$mdDialog.show({
 			controller: DialogNewDocumentController,
-			templateUrl: sbiModule_config.contextName+'/js/src/angular_1.4/tools/documentbrowser/template/documentDialogIframeTemplate.jsp',
+			templateUrl: sbiModule_config.dynamicResourcesBasePath+'/angular_1.4/tools/documentbrowser/template/documentDialogIframeTemplate.jsp',
 			clickOutsideToClose:false,
 			escapeToClose :false,
 			fullscreen: true,
@@ -568,11 +599,11 @@ function DialogEditDocumentController($scope,$mdDialog,sbiModule_config,document
 
 function DialogNewDocumentController($scope,$mdDialog,$mdBottomSheet,sbiModule_config,selectedFolder,typeDocument,sbiModule_config,sbiModule_user,sbiModule_translate){
 
-	var folderId= selectedFolder==undefined? "" : "&FUNCTIONALITY_ID="+selectedFolder.id;
+	var folderId = selectedFolder==undefined? "" : "&FUNCTIONALITY_ID="+selectedFolder.id;
 	$scope.iframeUrl=sbiModule_config.contextName+"/servlet/AdapterHTTP?PAGE=DetailBIObjectPage&SBI_ENVIRONMENT=DOCBROWSER&LIGHT_NAVIGATOR_DISABLED=FALSE&MESSAGEDET=DETAIL_NEW"+folderId;
 
 	 if(typeDocument=="cockpit"){
-			$scope.iframeUrl= sbiModule_config.engineUrls.cockpitServiceUrl +  '&SBI_ENVIRONMENT=DOCBROWSER&IS_TECHNICAL_USER=' + sbiModule_user.isTechnicalUser + "&documentMode=EDIT";
+			$scope.iframeUrl= sbiModule_config.engineUrls.cockpitServiceUrl +  '&SBI_ENVIRONMENT=DOCBROWSER&IS_TECHNICAL_USER=' + sbiModule_user.isTechnicalUser + "&documentMode=EDIT"+folderId;
 	 }
 
 	$scope.closeDialogFromExt=function(reloadFolder){

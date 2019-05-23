@@ -6,6 +6,20 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 	this.datasetMapByLabel={};
 
 	this.infoColumns = [];
+	this.datasetTypes = {
+			"SbiQueryDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.query'),
+			"SbiCkanDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.ckan'),
+			"SbiCustomDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.custom'),
+			"SbiFileDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.file'),
+			"SbiFlatDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.flat'),
+			"SbiJClassDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.jclass'),
+			"SbiScriptDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.script'),
+			"SbiFederatedDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.federated'),
+			"SbiQbeDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.qbe'),
+			"SbiSolrDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.solr'),
+			"SbiSPARQLDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.sparql'),
+			"SbiRESTDataSet": sbiModule_translate.load('kn.cockpit.dataset.type.rest')
+	}
 
 	this.isDatasetFromTemplateLoaded = false;
 
@@ -706,7 +720,7 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 		if(dataset.useCache==false){
 			params+="&nearRealtime=true";
 		}
-		
+
 		var limitRows;
         if(ngModel.limitRows){
             limitRows = ngModel.limitRows;
@@ -717,7 +731,7 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
             params += "&limit=" + limitRows.rows;
         }
 		
-		var filtersToSend = ds.getWidgetSelectionsAndFilters(ngModel, dataset, loadDomainValues);
+		var filtersToSendWithoutParams = ds.getWidgetSelectionsAndFilters(ngModel, dataset, loadDomainValues);
 
 		if(ngModel.search
 				&& ngModel.search.text && ngModel.search.text!=""
@@ -729,23 +743,13 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 			likeSelections[dataset.label] = searchData;
 			bodyString = bodyString + ",likeSelections:" + JSON.stringify(likeSelections);
 		}
-
-		var filtersToSendWithoutParams = {};
-															
-		angular.copy(filtersToSend,filtersToSendWithoutParams);
-		angular.forEach(filtersToSendWithoutParams, function(item){
-			var paramsToDelete = [];
-			for (var property in item) {
-				if (item.hasOwnProperty(property) && property.startsWith("$P{") && property.endsWith("}")) {
-					paramsToDelete.push(property);
-				}
-			}
-			angular.forEach(paramsToDelete, function(prop){
-				delete item[prop];
-			});
-		});
    
 		savedFilters = filtersToSendWithoutParams;
+
+		if(dataset.type == "SbiSolrDataSet" && ngModel.type != "discovery"){
+            bodyString = bodyString + ",options:{solrFacetPivot:true}";
+        }
+
 		bodyString = bodyString + ",selections:" + JSON.stringify(filtersToSendWithoutParams) + "}";
 
 		params += "&widgetName=" + encodeURIComponent(ngModel.content.name);
@@ -816,16 +820,31 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 			filtersToSend = angular.copy(cockpitModule_widgetSelection.getCurrentSelections(datasetLabel));
 			var filters = angular.copy(cockpitModule_widgetSelection.getCurrentFilters(datasetLabel));
 			angular.merge(filtersToSend, filters);
-		}
 
-		var limitRows;
-		if(widgetObject.limitRows){
-			limitRows = widgetObject.limitRows;
-		}else if(widgetObject.content && widgetObject.content.limitRows){
-			limitRows = widgetObject.content.limitRows;
-		}
-		if(limitRows != undefined && limitRows.enable && limitRows.rows > 0){
-			params += "&limit=" + limitRows.rows;
+            if(widgetObject.type=="selector"){
+                var isColumnInAssociation = false;
+                for(var i=0; !isColumnInAssociation && i<cockpitModule_template.configuration.aggregations.length; i++){
+                    var aggregation = cockpitModule_template.configuration.aggregations[i];
+                    for(var j=0; !isColumnInAssociation && j<aggregation.associations.length; j++){
+                        var association = aggregation.associations[j];
+                        for(var k=0; !isColumnInAssociation && k<association.fields.length; k++){
+                            var field = association.fields[k];
+                            if(field.type=="dataset" && field.store==datasetLabel && field.column==widgetObject.content.selectedColumn.name){
+                                isColumnInAssociation = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if(!isColumnInAssociation){
+                    if(widgetObject.dataset && widgetObject.dataset.label && filtersToSend[widgetObject.dataset.label]
+                            && widgetObject.content && widgetObject.content.selectedColumn && widgetObject.content.selectedColumn.name
+                            && filtersToSend[widgetObject.dataset.label][widgetObject.content.selectedColumn.name]){
+                        delete filtersToSend[widgetObject.dataset.label][widgetObject.content.selectedColumn.name];
+                    }
+                }
+            }
 		}
 
 		var filters;
@@ -902,7 +921,23 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 				}
 			}
 		}
-		return filtersToSend;
+		
+		var filtersToSendWithoutParams = {};
+		
+		angular.copy(filtersToSend, filtersToSendWithoutParams);
+		angular.forEach(filtersToSendWithoutParams, function(item){
+			var paramsToDelete = [];
+			for (var property in item) {
+				if (item.hasOwnProperty(property) && property.startsWith("$P{") && property.endsWith("}")) {
+					paramsToDelete.push(property);
+				}
+			}
+			angular.forEach(paramsToDelete, function(prop){
+				delete item[prop];
+			});
+		});
+		
+		return filtersToSendWithoutParams;
 	}
 
 	this.getParametersAsString = function(parameters){
@@ -977,7 +1012,7 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 
 	}
 
-	this.addDataset=function(attachToElementWithId,container,multiple,autoAdd,typeAvailable,typeExclusion){
+	this.addDataset=function(attachToElementWithId,container,multiple,autoAdd,typeAvailable,typeExclusion,skipParameters){
 		var deferred = $q.defer();
 		var eleToAtt=document.body;
 		if(attachToElementWithId!=undefined){
@@ -989,6 +1024,13 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 				locals :{currentAvaiableDataset:container,multiple:multiple,deferred:deferred},
 				controller: function($scope,mdPanelRef,sbiModule_translate,cockpitModule_datasetServices,currentAvaiableDataset,multiple,deferred,$mdDialog){
 
+					$scope.translate = sbiModule_translate;
+					$scope.datasetSearchText = '';
+					$scope.filterDataset = function(){
+						var tempDatasetList = $filter('filter')($scope.datasetList,$scope.datasetSearchText);
+						$scope.cockpitDatasetGrid.api.setRowData(tempDatasetList);
+					}
+					
 					$scope.tmpCurrentAvaiableDataset;
 					if(multiple){
 						tmpCurrentAvaiableDataset=[];
@@ -998,7 +1040,36 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 
 					$scope.multiple=multiple;
 
-					$scope.cockpitDatasetColumn=[{label:"Label",name:"label"},{label:"Name",name:"name" } ];
+					$scope.cockpitDatasetColumn = [
+						{"headerName": sbiModule_translate.load('kn.cockpit.dataset.label'),"field":"label",headerCheckboxSelection: multiple, checkboxSelection: multiple},
+						{"headerName": sbiModule_translate.load('kn.cockpit.dataset.name'),"field":"name"},
+						{"headerName": sbiModule_translate.load('kn.cockpit.dataset.type'),"field":"type",cellRenderer:typeRenderer,width: 250,suppressSizeToFit:true,suppressMovable:true},
+						{"headerName": sbiModule_translate.load('kn.cockpit.dataset.hasParameters'),"field":"parameters","cellStyle":
+							{"display":"inline-flex","justify-content":"center", "align-items": "center"},cellRenderer:hasParametersRenderer,suppressSorting:true,suppressFilter:true,width: 150,suppressSizeToFit:true,suppressMovable:true}];
+
+					$scope.cockpitDatasetGrid = {
+					        enableColResize: false,
+					        enableFilter: true,
+					        enableSorting: true,
+					        pagination: true,
+					        paginationAutoPageSize: true,
+					        rowSelection: multiple ? 'multiple' : 'single',
+					        rowMultiSelectWithClick: multiple,
+					        onGridSizeChanged: resizeColumns,
+					        columnDefs : $scope.cockpitDatasetColumn
+					};
+
+					function resizeColumns(){
+						$scope.cockpitDatasetGrid.api.sizeColumnsToFit();
+					}
+
+					function hasParametersRenderer(params){
+						return (params.value.length > 0) ? '<i class="fa fa-check"></i>' : '';
+					}
+					
+					function typeRenderer(params){
+						return cockpitModule_datasetServices.datasetTypes[params.value] || sbiModule_translate.load('kn.cockpit.dataset.type.generic');
+					}
 
 					$scope.isDatasetListLoaded = false;
 
@@ -1057,6 +1128,7 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 						
 						$scope.datasetList = datasetList;
 						$scope.isDatasetListLoaded = true;
+						$scope.cockpitDatasetGrid.api.setRowData($scope.datasetList);
 					},function(response){
 						sbiModule_restServices.errorHandler(response.data,"");
 						def.reject();
@@ -1070,6 +1142,7 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 
 					$scope.saveDataset=function(){
 						if(multiple){
+							$scope.tmpCurrentAvaiableDataset = $scope.cockpitDatasetGrid.api.getSelectedRows();
 							for(var i=0;i<$scope.tmpCurrentAvaiableDataset.length;i++){
 								$scope.tmpCurrentAvaiableDataset[i].expanded = true;
 								if(autoAdd){
@@ -1084,7 +1157,8 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 							$scope.$destroy();
 
 						}else{
-							if($scope.tmpCurrentAvaiableDataset.parameters!=null && $scope.tmpCurrentAvaiableDataset.parameters.length>0){
+							$scope.tmpCurrentAvaiableDataset = $scope.cockpitDatasetGrid.api.getSelectedRows()[0];
+							if($scope.tmpCurrentAvaiableDataset.parameters!=null && $scope.tmpCurrentAvaiableDataset.parameters.length>0 && !skipParameters){
 								//fill the parameter
 
 								 $mdDialog.show({
@@ -1508,7 +1582,9 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 	 					if(colValue == undefined) colValue ='';
 
 	 					if(allDatasetRecords.metaData.fields[1].type == 'float' && model.numbers){
-	 						colValue = ds.formatValue(colValue,model.numbers);
+	 						if(model.numbers.format) colValue = $filter('number')(colValue,model.numbers.precision);
+	 						else colValue = model.numbers.precision ? parseFloat(colValue).toFixed(model.numbers.precision) : colValue;
+	 						colValue = (model.numbers.prefix || '') + colValue + (model.numbers.suffix || '');
 	 					}
 
 
@@ -1550,49 +1626,49 @@ angular.module("cockpitModule").service("cockpitModule_datasetServices",function
 	}
 
 	//conditional value formatting
-    ds.formatValue = function (value, numbersModel){
-		var output = value;
-		if(!numbersModel || !numbersModel.precision || numbersModel.precision < 0) numbersModel.precision = 2;
-
-		//setting the number precision when format is not present
-		if (numbersModel && numbersModel.precision && !numbersModel.format) {
-			output = parseFloat(value).toFixed(numbersModel.precision);
-		}
-
-		if (numbersModel && numbersModel.format){
-	    	switch (numbersModel.format) {
-	    	case "#.###":
-	    		output = ds.numberFormat(value, 0, ',', '.');
-	    	break;
-	    	case "#,###":
-	    		output = ds.numberFormat(value, 0, '.', ',');
-	    	break;
-	    	case "#.###,##":
-	    		output = ds.numberFormat(value, numbersModel.precision, ',', '.');
-	    	break;
-	    	case "#,###.##":
-	    		output = ds.numberFormat(value, numbersModel.precision, '.', ',');
-	    		break;
-	    	default:
-	    		break;
-	    	}
-		}
-    	return (numbersModel.prefix||'') + output + (numbersModel.suffix||'');
-	}
-
-    //formatting function with the given parameters
-	ds.numberFormat = function (value, dec, dsep, tsep) {
-
-		  if (isNaN(value) || value == null) return value;
-
-		  value = parseFloat(value).toFixed(~~dec);
-		  tsep = typeof tsep == 'string' ? tsep : ',';
-
-		  var parts = value.split('.'), fnums = parts[0],
-		    decimals = parts[1] ? (dsep || '.') + parts[1] : '';
-
-		  return fnums.replace(/(\d)(?=(?:\d{3})+$)/g, '$1' + tsep) + decimals;
-	}
+//    ds.formatValue = function (value, numbersModel){
+//		var output = value;
+//		if(!numbersModel || !numbersModel.precision || numbersModel.precision < 0) numbersModel.precision = 2;
+//
+//		//setting the number precision when format is not present
+//		if (numbersModel && numbersModel.precision && !numbersModel.format) {
+//			output = parseFloat(value).toFixed(numbersModel.precision);
+//		}
+//
+//		if (numbersModel && numbersModel.format){
+//	    	switch (numbersModel.format) {
+//	    	case "#.###":
+//	    		output = ds.numberFormat(value, 0, ',', '.');
+//	    	break;
+//	    	case "#,###":
+//	    		output = ds.numberFormat(value, 0, '.', ',');
+//	    	break;
+//	    	case "#.###,##":
+//	    		output = ds.numberFormat(value, numbersModel.precision, ',', '.');
+//	    	break;
+//	    	case "#,###.##":
+//	    		output = ds.numberFormat(value, numbersModel.precision, '.', ',');
+//	    		break;
+//	    	default:
+//	    		break;
+//	    	}
+//		}
+//    	return (numbersModel.prefix||'') + output + (numbersModel.suffix||'');
+//	}
+//
+//    //formatting function with the given parameters
+//	ds.numberFormat = function (value, dec, dsep, tsep) {
+//
+//		  if (isNaN(value) || value == null) return value;
+//
+//		  value = parseFloat(value).toFixed(~~dec);
+//		  tsep = typeof tsep == 'string' ? tsep : ',';
+//
+//		  var parts = value.split('.'), fnums = parts[0],
+//		    decimals = parts[1] ? (dsep || '.') + parts[1] : '';
+//
+//		  return fnums.replace(/(\d)(?=(?:\d{3})+$)/g, '$1' + tsep) + decimals;
+//	}
 
 })
 .run(function() {

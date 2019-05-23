@@ -19,11 +19,15 @@
 <%@page import="java.util.ArrayList"%>
 <%@page import="it.eng.spagobi.utilities.themes.ThemesManager"%>
 <%@page import="it.eng.spagobi.utilities.engines.EngineStartServletIOManager"%>
-
+<%@page import="it.eng.knowage.commons.utilities.urls.UrlBuilder"%>
 
 <%
-
-
+	String spagoBiContext = GeneralUtilities.getSpagoBiContext();						//  /knowage
+	String metaEngineContext = request.getContextPath(); 								//  /knowagemetaengine
+	UrlBuilder urlBuilder = new UrlBuilder(spagoBiContext, metaEngineContext);
+	String dynamicResourcesBasePath = urlBuilder.getDynamicResorucesBasePath();  		//  /knowage/js/src
+	String dynamicResourcesEnginePath = urlBuilder.getDynamicResourcesEnginePath(); 	//  /knowagemetaengine/js/src
+	
 	RequestContainer aRequestContainer = null;
 	ResponseContainer aResponseContainer = null;
 	SessionContainer aSessionContainer = null;

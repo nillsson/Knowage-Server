@@ -27,7 +27,7 @@ app.directive('chartstructureTab', function(sbiModule_config) {
 			restrict: 'AE',
 			replace: true,
 			templateUrl: function(){
-			      return sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/chartstructure-tab.html'
+			      return sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/structure-tab/chartstructure-tab.html'
 		      },
 			controller: structureTabControllerFunction
 		}
@@ -391,7 +391,7 @@ function structureTabControllerFunction($scope,sbiModule_translate,sbiModule_res
 						base = StructureTabService.getGaugeTemplate();
 						break;
 					case 'line':
-						base = StructureTabService.getBaseTemplate();
+						base = StructureTabService.getBaseTemplate($scope.selectedChartType);
 						break;
 					case 'heatmap':
 						base = StructureTabService.getHeatmapTemplate();
@@ -400,10 +400,10 @@ function structureTabControllerFunction($scope,sbiModule_translate,sbiModule_res
 						base = StructureTabService.getRadarTemplate();
 						break;
 					case 'bar':
-						base = StructureTabService.getBaseTemplate();
+						base = StructureTabService.getBaseTemplate($scope.selectedChartType);
 						break;
 					case 'pie':
-						base = StructureTabService.getBaseTemplate();
+						base = StructureTabService.getBaseTemplate($scope.selectedChartType);
 						break;
 					case 'chord':
 						base = StructureTabService.getChordTemplate();
@@ -662,6 +662,17 @@ function structureTabControllerFunction($scope,sbiModule_translate,sbiModule_res
 							 }
 						}
 					}
+
+					if(!$scope.chartTemplate.VALUES.CATEGORY.drillOrder){
+						$scope.chartTemplate.VALUES.CATEGORY.drillOrder={}
+
+						for (var j = 0; j <  $scope.categories.length; j++) {
+
+							$scope.chartTemplate.VALUES.CATEGORY.drillOrder[$scope.categories[j].column] = {orderColumn:$scope.categories[j].orderColumn, orderType:$scope.categories[j].orderType};
+
+						}
+
+					}
 				}
 			}
 		}
@@ -761,6 +772,8 @@ function structureTabControllerFunction($scope,sbiModule_translate,sbiModule_res
 	}
 
 	$scope.categoryRemove = function(indexOfItem) {
+		if($scope.chartTemplate.VALUES.CATEGORY.drillOrder)
+		delete $scope.chartTemplate.VALUES.CATEGORY.drillOrder[$scope.categories[indexOfItem].column];
 		$scope.categories.splice(indexOfItem,1);
 	}
 

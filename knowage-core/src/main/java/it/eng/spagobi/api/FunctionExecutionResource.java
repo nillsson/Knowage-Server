@@ -63,7 +63,6 @@ import it.eng.spagobi.behaviouralmodel.analyticaldriver.bo.ParameterUse;
 import it.eng.spagobi.behaviouralmodel.analyticaldriver.dao.IParameterUseDAO;
 import it.eng.spagobi.commons.bo.UserProfile;
 import it.eng.spagobi.commons.dao.DAOFactory;
-import it.eng.spagobi.commons.utilities.indexing.LuceneIndexer;
 import it.eng.spagobi.commons.utilities.messages.IMessageBuilder;
 import it.eng.spagobi.commons.utilities.messages.MessageBuilder;
 import it.eng.spagobi.commons.utilities.messages.MessageBuilderFactory;
@@ -451,9 +450,9 @@ public class FunctionExecutionResource extends AbstractSpagoBIResource {
 	/**
 	 * Produces a json of document metadata grouped by typeCode ("GENERAL_META", "LONG_TEXT", "SHORT_TEXT")
 	 *
-	 * @param id
+	 * @param objectId
 	 *            of document
-	 * @param id
+	 * @param subObjectId
 	 *            of subObject
 	 * @param httpRequest
 	 * @return a response with a json
@@ -567,12 +566,6 @@ public class FunctionExecutionResource extends AbstractSpagoBIResource {
 				}
 
 			}
-			/*
-			 * indexes biobject by modifying document in index
-			 */
-			BIObject biObjToIndex = DAOFactory.getBIObjectDAO().loadBIObjectById(biobjectId);
-			LuceneIndexer.updateBiobjInIndex(biObjToIndex, false);
-
 		} catch (Exception e) {
 			logger.error(request.getPathInfo(), e);
 			return Response.ok(new JSONObject("{\"errors\":[{\"message\":\"Exception occurred while saving metadata\"}]}").toString()).build();

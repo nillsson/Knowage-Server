@@ -54,8 +54,7 @@ angular
 							scope:$scope,
 							preserveScope: true,
 							controller: openQbeInterfaceController,
-	//						templateUrl: '/knowage/js/src/angular_1.4/tools/workspace/scripts/services/qbeViewerTemplate.html',
-							templateUrl: sbiModule_config.contextName + '/js/src/angular_1.4/tools/workspace/scripts/services/qbeViewerTemplate.html',
+							templateUrl: sbiModule_config.dynamicResourcesBasePath + '/angular_1.4/tools/workspace/scripts/services/qbeViewerTemplate.html',
 							fullscreen: true,
 							locals:{
 									url:url,
@@ -90,7 +89,7 @@ angular
 							scope:$scope,
 							preserveScope: true,
 							controller: openQbeInterfaceController,
-							templateUrl: sbiModule_config.contextName + '/js/src/angular_1.4/tools/workspace/scripts/services/qbeViewerTemplate.html',
+							templateUrl: sbiModule_config.dynamicResourcesBasePath + '/angular_1.4/tools/workspace/scripts/services/qbeViewerTemplate.html',
 							fullscreen: true,
 							locals:{
 								url:url,
@@ -140,7 +139,7 @@ angular
 			var openConfirmationPanel = function(okFunction,cancelFunction){
 				var config = {
 						attachTo:  angular.element(document.body),
-						templateUrl: sbiModule_config.contextName +'/js/src/angular_1.4/tools/workspace/templates/closingConfirmationPanel.html',
+						templateUrl: sbiModule_config.dynamicResourcesBasePath +'/angular_1.4/tools/workspace/templates/closingConfirmationPanel.html',
 						position: $mdPanel.newPanelPosition().absolute().center(),
 						fullscreen :false,
 						controller: function($scope,mdPanelRef,sbiModule_translate){
@@ -177,14 +176,17 @@ angular
 			var openPanelForSavingQbeDataset = function() {
 				savingPanelConfig = {
 						attachTo:  angular.element(document.body),
-						templateUrl: sbiModule_config.contextName +'/js/src/angular_1.4/tools/workspace/templates/saveQbeDatasetTemplate.html',
+						templateUrl: sbiModule_config.dynamicResourcesBasePath +'/angular_1.4/tools/workspace/templates/saveQbeDatasetTemplate.html',
 						position: $mdPanel.newPanelPosition().absolute().center(),
+						panelClass:"layout-column",
 						fullscreen: true,
 						controller: function($scope, selectedDataSet, mdPanelRef, closeDocumentFn, savedFromQbe, sbiModule_messaging, sbiModule_translate, datasetSave_service, datasetScheduler_service){
 							$scope.model = {selectedDataSet: selectedDataSet, "mdPanelRef": mdPanelRef};
 
 							$scope.closePanel = function(){
-								mdPanelRef.close();
+								mdPanelRef.close().then(function(panelRef) {
+								    panelRef.destroy();
+								  });;
 							}
 
 							$scope.saveDataSet = function() {
@@ -285,7 +287,16 @@ angular
 				$scope.showDrivers = !$scope.showDrivers;
 			}
 
-			$scope.closeDocument = function() {
+			var onClosing = function(){
+				console.info("[RELOAD]: Reload all necessary datasets (its different categories)");
+				$scope.selectedDataSet = {};
+
+				$scope.currentOptionMainMenu=="datasets" ? $scope.reloadMyDataFn() : $scope.reloadMyData = true;
+				
+				$mdDialog.hide();
+			}
+
+			$scope.closeDocument = function(confirm) {
 
 
 
@@ -293,27 +304,13 @@ angular
 					//$scope.selectedDataSet.qbeJSONQuery = document.getElementById("documentViewerIframe").contentWindow.qbe.getQueriesCatalogue();
 					$mdDialog.hide();
 					comunicator.sendMessage("close");
-				} else {
-
+				}else if(confirm){
 					openConfirmationPanel(function(){
-						console.info("[RELOAD]: Reload all necessary datasets (its different categories)");
-						$scope.selectedDataSet = {};
-
-						$scope.currentOptionMainMenu=="datasets" ? $scope.reloadMyDataFn() : $scope.reloadMyData = true;
-
-						if($scope.currentOptionMainMenu=="models"){
-
-							if ($scope.currentModelsTab=="federations") {
-								// If the suboption of the Data option is Federations.
-								$scope.getFederatedDatasets();
-							}
-
-						}
-
-						$mdDialog.hide();
+						onClosing();
 					});
 
-
+				} else {
+						onClosing();
 
 				}
 			}
@@ -344,12 +341,29 @@ angular
 				}
 			};
 
+			/*
+			  * WATCH ON VISUAL DEPENDENCIES PARAMETER OBJECT
+			  */
+				$scope.$watch( function() {
+					return driversDependencyService.parametersWithVisualDependency;
+				},
+				function(newValue, oldValue) {
+					if (!angular.equals(newValue, oldValue)) {
+						for(var i=0; i<newValue.length; i++){
+							if(oldValue[i] && (!angular.equals(newValue[i].parameterValue, oldValue[i].parameterValue)) ){
+								driversDependencyService.updateVisualDependency(newValue[i],driverableObject);
+								break;
+							}
+
+						}
+					}
+				},true);
+
 			$scope.createNewViewpoint = function() {
 				$mdDialog.show({
 					autoWrap: false,
 					skipHide: true,
 					preserveScope : true,
-					templateUrl : sbiModule_config.contextName + '/js/src/angular_1.4/tools/glossary/commons/templates/dialog-new-parameters-document-execution.html',
 					controllerAs : 'vpCtrl',
 					controller : function($mdDialog) {
 						var vpctl = this;
@@ -385,7 +399,7 @@ angular
 						};
 					},
 
-					templateUrl : sbiModule_config.contextName + '/js/src/angular_1.4/tools/documentexecution/templates/dialog-new-parameters-document-execution.html'
+					templateUrl : sbiModule_config.dynamicResourcesBasePath + '/angular_1.4/tools/documentexecution/templates/dialog-new-parameters-document-execution.html'
 				});
 			};
 

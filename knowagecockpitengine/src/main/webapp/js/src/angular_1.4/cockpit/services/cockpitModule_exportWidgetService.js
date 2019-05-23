@@ -31,13 +31,14 @@
 				.then(function(requestConfig){
 					var config = {"responseType": "arraybuffer"};
 					var exportingToast = sbiModule_messaging.showInfoMessage(sbiModule_translate.load("sbi.cockpit.widgets.exporting"), 'Success!', 0);
-															
+					var documentLabel = requestConfig.DOCUMENT_LABEL;
+					
 					sbiModule_restServices.promisePost('1.0/cockpit/export', 'excel', requestConfig, config)
 						.then(function(response){
 							var mimeType = response.headers("Content-type");
 							var fileName = 'exported_widget';
-							if (widget.content) {
-								fileName = widget.content.name;
+							if (documentLabel != undefined) {
+								fileName = documentLabel;
 							}
 							$mdToast.hide(exportingToast);
 							sbiModule_download.getBlob(response.data, fileName, mimeType, type);
@@ -68,7 +69,7 @@
 			var dataset = cockpitModule_datasetServices.getDatasetById(dsId);
 
 			var aggregation = cockpitModule_widgetSelection.getAggregation(widget, dataset);
-			cleanAggregation(widget, aggregation);
+			// cleanAggregation(widget, aggregation);
 
 			var loadDomainValues = widget.type == "selector" ? true : false;
 			var selections = cockpitModule_datasetServices.getWidgetSelectionsAndFilters(widget, dataset, loadDomainValues);

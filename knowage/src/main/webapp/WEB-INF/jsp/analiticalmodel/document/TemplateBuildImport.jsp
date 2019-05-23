@@ -16,5 +16,5 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 --%>
     
-    <script type="text/javascript" src="<%=urlBuilder.getResourceLink(request,"/js/analiticalmodel/services/handlingMessages.js")%>"></script>    
-    <script type="text/javascript" src="<%=urlBuilder.getResourceLink(request,"/js/analiticalmodel/controllers/TemplateBuildController.js")%>"></script>
+    <script type="text/javascript" src="<%=urlBuilder.getResourceLink(request,"/js/src/analiticalmodel/services/handlingMessages.js")%>"></script>    
+    <script type="text/javascript" src="<%=urlBuilder.getResourceLink(request,"/js/src/analiticalmodel/controllers/TemplateBuildController.js")%>"></script>

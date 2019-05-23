@@ -306,6 +306,17 @@
                 
             }
         }
+		md-menu-item {
+			button {
+				span {
+					text-transform: none;
+				}
+			}
+		}
+		.md-label {
+			position:relative; 
+			right:-12px;
+		}
     }
     .qbeCustomTable {
         padding: 4px; 

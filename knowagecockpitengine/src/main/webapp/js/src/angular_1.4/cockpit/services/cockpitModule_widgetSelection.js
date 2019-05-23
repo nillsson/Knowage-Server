@@ -64,7 +64,6 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
 
 					if(category){
 						if(Array.isArray(category)){
-
 							for (var j = 0; j < category.length; j++) {
 								if(category[j].column == col.name){
 									obj["orderType"] = col.orderType;
@@ -72,8 +71,7 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
 									newCategArray.push(obj)
 								}
 								}
-							}
-						else {
+                        }else{
 							if(col.fieldType == "ATTRIBUTE" && ngModel.content.chartTemplate.CHART.groupCategories){
 								obj["orderColumn"] = col.name;
 								obj["orderType"] = "asc";
@@ -88,35 +86,28 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
 				// SUM is default but for attribute is meaningless
 				if(ngModel.type != "discovery" && (col.fieldType=="ATTRIBUTE" || col.fieldType=="SPATIAL_ATTRIBUTE") && col.aggregationSelected && col.aggregationSelected === 'SUM'){
 					obj["funct"] = 'NONE';
-				}
-				else{
-
+				}else{
 					// add aggregation for measures and attributes
-					if (col.aggregationSelected){
+					if (col.aggregationSelected && col.facet != false){
 						if(col.aggregationSelected instanceof Array){
 							for(var z = 0; z<col.aggregationSelected.length;z++){
 								col.aggregationSelected[z] = col.aggregationSelected[z].toUpperCase();
 							}
 							obj["funct"] = col.aggregationSelected;
-						}
-						else{
+						}else{
 							obj["funct"] = col.aggregationSelected.toUpperCase();
 						}
-					}
-
-					else {
+					}else{
 						obj["funct"] = 'NONE';
 					}
 				}
-
 
 				if(col.fieldType=="ATTRIBUTE" || col.fieldType=="SPATIAL_ATTRIBUTE"){
 					if(newCategArray.length >0 ){
 						for (var m = 0; m < newCategArray.length; m++) {
 							categories.push(newCategArray[m])
 						}
-					}
-					else {
+					}else{
 						if(col.aggregationColumn) obj.functColumn = col.aggregationColumn;
 						categories.push(obj)
 					}
@@ -230,7 +221,7 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
 		return obj;
 	}
 
-	this.getAssociations=function(reloadSelection,tmpObj,deferred){
+	this.getAssociations=function(reloadSelection,tmpObj,deferred,associatedDatasets){
 		var payload = {};
 		payload["items"] = tmpObj==undefined ? cockpitModule_template.configuration.associations: tmpObj.associations;
 
@@ -245,8 +236,7 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
 				angular.copy(response.data,cockpitModule_template.configuration.aggregations);
 				if(reloadSelection || (!reloadSelection && someDel)){
 					cockpitModule_widgetSelectionUtils.responseCurrentSelection = [];
-					ws.refreshAllAssociations();
-
+					ws.refreshAllAssociations(associatedDatasets);
 				}
 			}
 			if(deferred!=undefined){
@@ -516,33 +506,49 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
 		$rootScope.$broadcast('WIDGET_EVENT','UPDATE_FROM_SELECTION',{isInit:isInit,data:data});
 	}
 
-	this.execRefreshAllAssociations = function(isInit){
+	this.execRefreshAllAssociations = function(isInit,associatedDatasets){
 		console.log("in: execRefreshAllAssociations",(new Date()).getTime());
 		var  assRefCount=0;
 		angular.forEach(cockpitModule_widgetSelectionUtils.associations, function(item,index){
 			var defer = $q.defer();
-			ws.loadAssociativeSelection(defer, item)
+			ws.loadAssociativeSelection(defer, item);
 			defer.promise.then(function(){
-				assRefCount++;
-				if(angular.equals(assRefCount,cockpitModule_widgetSelectionUtils.associations.length)){
-					ws.refreshAllAssociatedWidget(isInit);
-				}
-			})
-			})
+                assRefCount++;
+                if(angular.equals(assRefCount,cockpitModule_widgetSelectionUtils.associations.length)){
+                    if(associatedDatasets){
+                        var allAssociatedDatasets = []
+                        for(var i in associatedDatasets){
+                            var obj = ws.getDatasetAssociation(associatedDatasets[i]);
+                            if(obj && obj.datasets){
+                                for(var d in obj.datasets){
+                                    var ds = obj.datasets[d];
+                                    if(allAssociatedDatasets.indexOf(ds) == -1){
+                                        allAssociatedDatasets.push(ds);
+                                    }
+                                }
+                            }
+                        }
+                        for(var i in allAssociatedDatasets){
+                            ws.refreshAllWidgetWhithSameDataset(allAssociatedDatasets[i]);
+                        }
+                    }else{
+                        ws.refreshAllAssociatedWidget(isInit);
+                    }
+                }
+            });
+        })
 	}
 
-	this.refreshAllAssociations = function(){
+	this.refreshAllAssociations = function(associatedDatasets){
 		console.log("in: refreshAllAssociation",(new Date()).getTime());
 		if(cockpitModule_properties.all_widget_initialized==true){
-			ws.execRefreshAllAssociations(false);
+			ws.execRefreshAllAssociations(false,associatedDatasets);
 		}else{
 			var AWI=$rootScope.$on('ALL_WIDGET_INITIALIZED',function(){
-				ws.execRefreshAllAssociations(true);
+				ws.execRefreshAllAssociations(true,associatedDatasets);
 				AWI();
 			});
-
 		}
-
 	}
 
 	this.clearAllSelections = function(){
@@ -711,18 +717,30 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
 				if(widget.dataset && widget.dataset.dsId){
 					var datasetLabel = datasetMap[""+widget.dataset.dsId];
 					if(datasetLabel != undefined){
-						var columns = (Array.isArray(widget.content.columnSelectedOfDataset) && widget.content.columnSelectedOfDataset[widget.dataset.dsId]) ?  widget.content.columnSelectedOfDataset[widget.dataset.dsId] : widget.content.columnSelectedOfDataset ;
+					    var columns;
+					    var columnNameProp;
+					    var columnAliasProp;
+					    if(widget.type=="static-pivot-table"){
+					        columns = widget.content.crosstabDefinition.columns;
+					        columns.concat(widget.content.crosstabDefinition.rows);
+					        columns.concat(widget.content.crosstabDefinition.measures);
+					        columnNameProp = "id";
+					        columnAliasProp = "alias";
+					    }else{
+					        columns = (Array.isArray(widget.content.columnSelectedOfDataset) && widget.content.columnSelectedOfDataset[widget.dataset.dsId]) ?  widget.content.columnSelectedOfDataset[widget.dataset.dsId] : widget.content.columnSelectedOfDataset ;
+					        columnNameProp = "name";
+                            columnAliasProp = "aliasToShow";
+					    }
 						for(var widgetColumnIndex in columns){
 						    var widgetColumn =columns[widgetColumnIndex];
-
-							if(widgetColumn && widgetColumn.name){
-								var columnName = widgetColumn.name;
+							if(widgetColumn && widgetColumn[columnNameProp]){
+								var columnName = widgetColumn[columnNameProp];
 								var colonIndex = columnName.indexOf(":");
 								if(colonIndex == -1){
-									if(columnName == widgetColumn.aliasToShow){
+									if(columnName == widgetColumn[columnAliasProp]){
 										columnSet.add(datasetLabel + "." + columnName);
 									}else{
-										aliasMap[datasetLabel + "." + widgetColumn.aliasToShow] = datasetLabel + "." + columnName;
+										aliasMap[datasetLabel + "." + widgetColumn[columnAliasProp]] = datasetLabel + "." + columnName;
 									}
 								}
 							}
@@ -752,15 +770,19 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
 
 	this.updateSelections = function (tmpSelection, tmpFilters){
         var reloadAss = false;
+        var associatedDatasets = [];
         var reloadFilt = [];
 
         if(!angular.equals(tmpSelection, cockpitModule_template.configuration.aggregations)){
-            var oldSelections = Object.keys(cockpitModule_template.configuration.aggregations[0].selection);
-            var newSelections = Object.keys(tmpSelection[0].selection);
-            var removedSelections = oldSelections.filter(function(x) {return newSelections.indexOf(x) < 0;});
-            for(i in removedSelections){
-                var s = removedSelections[i].split(".");
-                removeTimestampedSelection(s[0], s[1]);
+            for(var i in cockpitModule_template.configuration.aggregations){
+                var oldSelections = Object.keys(cockpitModule_template.configuration.aggregations[i].selection);
+                var newSelections = Object.keys(tmpSelection[i].selection);
+                var removedSelections = oldSelections.filter(function(x) {return newSelections.indexOf(x) < 0;});
+                for(i in removedSelections){
+                    var s = removedSelections[i].split(".");
+                    ws.removeTimestampedSelection(s[0], s[1]);
+                    associatedDatasets.push(s[0]);
+                }
             }
 
             angular.copy(tmpSelection, cockpitModule_template.configuration.aggregations);
@@ -775,7 +797,7 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
                 var removedDsLabel = removedDsLabels[i];
                 var removedColNames = Object.keys(cockpitModule_template.configuration.filters[removedDsLabel]);
                 for(j in removedColNames){
-                    removeTimestampedSelection(removedDsLabel, removedColNames[j]);
+                    ws.removeTimestampedSelection(removedDsLabel, removedColNames[j]);
                 }
             }
             var dsLabels = oldDsLabels.filter(function(x) {return newDsLabels.indexOf(x) >= 0;});
@@ -786,24 +808,22 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
                             return Object.keys(tmpFilters[dsLabel]).indexOf(x) < 0;
                         });
                 for(j in removedColNames){
-                    removeTimestampedSelection(dsLabel, removedColNames[j]);
+                    ws.removeTimestampedSelection(dsLabel, removedColNames[j]);
                 }
             }
 
             angular.forEach(cockpitModule_template.configuration.filters, function(val,dsLabel){
                 if(tmpFilters[dsLabel] == undefined || !angular.equals(tmpFilters[dsLabel],val)){
-                    reloadFilt.push(dsLabel)
+                    if(reloadFilt.indexOf(dsLabel) == -1){
+                        reloadFilt.push(dsLabel)
+                    }
                 }
             });
             angular.copy(tmpFilters, cockpitModule_template.configuration.filters);
         }
 
         if(reloadAss){
-            ws.getAssociations(true);
-        }
-
-        if(!reloadAss && reloadFilt.length!=0){
-            ws.refreshAllWidgetWhithSameDataset(reloadFilt);
+            ws.getAssociations(true,undefined,undefined,associatedDatasets);
         }
 
         var hs=false;
@@ -817,6 +837,12 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
         if(hs == false && Object.keys(tmpFilters).length == 0){
             cockpitModule_properties.HAVE_SELECTIONS_OR_FILTERS = false;
         }
+
+        setTimeout(function() {
+            for(var i in reloadFilt){
+                ws.refreshAllWidgetWhithSameDataset(reloadFilt[i]);
+            }
+        }, 0);
 	}
 
 	this.getSelectionValues = function(datasetLabel, columnName){
@@ -870,12 +896,15 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
             ws.timestampedSelections.push(selection);
         }
         ws.timestampedSelections.sort(function(x,y){return x.creationTime - y.creationTime});
+
+        ws.setDirtyFlagOnWidgetsByDataset(dsLabel);
     }
 
-    var removeTimestampedSelection = function(dsLabel, colName){
+    this.removeTimestampedSelection = function(dsLabel, colName){
         var i = getTimestampedSelectionIndex(dsLabel, colName);
         if(i > -1){
             ws.timestampedSelections.splice(i, 1);
+            ws.setDirtyFlagOnWidgetsByDataset(dsLabel);
         }
     }
 
@@ -896,6 +925,36 @@ angular.module("cockpitModule").service("cockpitModule_widgetSelection",function
     this.isLastTimestampedSelection = function(dsLabel, colName){
         var last = ws.getLastTimestampedSelection();
         return last && last.dsLabel == dsLabel && last.colName == colName;
+    }
+
+    this.setDirtyFlagOnWidgetsByDataset = function(dsLabel){
+        var obj = ws.getDatasetAssociation(dsLabel);
+        if(obj && obj.datasets){
+            for(var d in obj.datasets){
+                var ds = obj.datasets[d];
+                ws.setDirtyFlagOnWidgets(ds);
+            }
+        }else{
+            ws.setDirtyFlagOnWidgets(dsLabel);
+        }
+    }
+
+    this.setDirtyFlagOnWidgets = function(dsLabel){
+        for(var i in cockpitModule_template.sheets){
+            var sheet = cockpitModule_template.sheets[i];
+            for(var j in sheet.widgets){
+                var widget = sheet.widgets[j];
+                if(widget.dataset){
+                    for(var k in cockpitModule_template.configuration.datasets){
+                        var ds = cockpitModule_template.configuration.datasets[k];
+                        if(ds.dsLabel == dsLabel && ds.dsId == widget.dataset.dsId){
+                            cockpitModule_properties.DIRTY_WIDGETS.push(widget.id);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
 })

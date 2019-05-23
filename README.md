@@ -27,6 +27,21 @@ check the FIWARE Catalogue entry for
 |  :books: [Documentation](http://knowage.rtfd.io/) | :page_facing_up: [Site](https://www.knowage-suite.com/site/home/) | :mortar_board: [Academy](https://fiware-academy.readthedocs.io/en/latest/processing/knowage) | :whale: [Docker Hub](https://hub.docker.com/r/fiware/knowage-server-docker/) | :dart: [Roadmap](https://github.com/KnowageLabs/Knowage-Server/blob/master/ROADMAP.md) |
 |---|---|---|---|---|
 
+
+## Contents
+
+-   [Modules available](#modules-available)
+-   [Editions](#editions)
+-   [Install](#install)
+-   [Usage](#usage)
+-   [Contributions](#contributions)
+-   [Documentation](#documentation)
+-   [More](#More)
+-   [Quality Assurance](#quality-assurance)
+-   [Testing](#testing)
+-   [License](#license)
+
+
 ## Modules available
 
 |                                                                                                                    | Name                   | Description                                                                                                              |
@@ -58,6 +73,18 @@ Knowage is available on two versions:
     commercial offering and some facilities for the administrator.
 
 This repository contains the source code of the Community Edition.
+
+## Install
+
+Information about how to install Knowage is available on official documentation on [Read the Docs](http://knowage-suite.readthedocs.io/) within Installation & Administration Manuals.
+
+An installer for Windows and Linux environments is available on [Knowage website](https://www.knowage-suite.com) within the download area.
+
+A `Dockerfile` is also available for your use - further information can be found [here](https://github.com/KnowageLabs/Knowage-Server-Docker).
+
+## Usage
+
+Information about how to use Knowage is available on official documentation on [Read the Docs](http://knowage-suite.readthedocs.io/) within User Guide and Functionalities sections.
 
 ## Contributions
 
@@ -93,7 +120,15 @@ follows:
     ![ ](https://img.shields.io/badge/dynamic/json.svg?label=Performance&url=https://fiware.github.io/catalogue/json/knowage.json&query=$.performance&colorB=blue)
     ![ ](https://img.shields.io/badge/dynamic/json.svg?label=Stability&url=https://fiware.github.io/catalogue/json/knowage.json&query=$.stability&colorB=blue)
 
----
+## Testing
+
+To run tests, type
+
+```console
+mvn test -DskipTests=false
+```
+
+from knowage-ce-parent folder.
 
 ## License
 

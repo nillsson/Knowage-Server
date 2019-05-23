@@ -184,6 +184,7 @@ angular.module('cockpitModule')
 function cockpitChartWidgetControllerFunction(
 		$scope,cockpitModule_widgetSelection,
 		cockpitModule_datasetServices,
+		cockpitModule_generalServices,
 		cockpitModule_widgetConfigurator,
 		$q,
 		$mdPanel,
@@ -238,7 +239,7 @@ function cockpitChartWidgetControllerFunction(
 
 	$scope.$on('changeChart', function (event, data) {
 		setAggregationsOnChartEngine($scope.ngModel.content)
-		$scope.$broadcast("changeChartType");
+		$scope.$broadcast("changeChartType",data);
 	});
 
 	$scope.$on('changedChartType', function (event, data){
@@ -250,6 +251,8 @@ function cockpitChartWidgetControllerFunction(
 			var dataset = cockpitModule_datasetServices.getDatasetById($scope.ngModel.dataset.dsId);
 			var aggregations = cockpitModule_widgetSelection.getAggregation($scope.ngModel,dataset);
 			$scope.ngModel.dataset.label = $scope.ngModel.dataset.dsLabel;
+			var filtersParams = cockpitModule_datasetServices.getWidgetSelectionsAndFilters($scope.ngModel,$scope.ngModel.dataset, false);
+
 			var filtersParams = cockpitModule_datasetServices.getWidgetSelectionsAndFilters($scope.ngModel,$scope.ngModel.dataset, false);
 
 			var params = cockpitModule_datasetServices.getDatasetParameters($scope.ngModel.dataset.dsId);
@@ -284,14 +287,22 @@ function cockpitChartWidgetControllerFunction(
 				} else {
 					dataToPass = $scope.realtimeDataManagement($scope.realTimeDatasetData, nature);
 				}
-				$scope.$broadcast(nature,dataToPass,(dataset.isRealtime && dataset.useCache),changedChartType,dataAndChartConf,objForDrill);
+				$scope.$broadcast(nature,dataToPass,(dataset.isRealtime && dataset.useCache),changedChartType,dataAndChartConf,objForDrill,cockpitModule_generalServices.isSavingDataConfiguration());
+				cockpitModule_generalServices.savingDataConfiguration(false)
 
 			} else {
 				//Refresh for Not realtime datasets
 				$timeout(function (){
-					$scope.$broadcast(nature,data, false, changedChartType,dataAndChartConf,objForDrill);
+					$scope.$broadcast(nature,data, false, changedChartType,dataAndChartConf,objForDrill, cockpitModule_generalServices.isSavingDataConfiguration());
+					cockpitModule_generalServices.savingDataConfiguration(false)
 				},400)
 
+			}
+			if(nature == 'init'){
+				$timeout(function(){
+					$scope.widgetIsInit=true;
+					cockpitModule_properties.INITIALIZED_WIDGETS.push($scope.ngModel.id);
+				},500);
 			}
 		}
 
@@ -1023,7 +1034,7 @@ function cockpitChartWidgetControllerFunction(
 
 			//if(d3Types.indexOf(chartType)<0){
 			if( Array.isArray(category)){
-				columnName = category[0].name;
+				columnName = category[(event.point.id.match(new RegExp("_", "g")) ).length-1].name;
 			}else{
 				columnName = category.name;
 			}
@@ -1102,7 +1113,7 @@ function cockpitChartWidgetControllerFunction(
     				"SERIE_NAME": event.point.series.name,
     				"SERIE_VALUE":event.point.value,
     				"CATEGORY_VALUE":event.point.name,
-    				"CATEGORY_NAME": $scope.ngModel.content.chartTemplate.CHART.VALUES.CATEGORY[0].name
+    				"CATEGORY_NAME": $scope.ngModel.content.chartTemplate.CHART.VALUES.CATEGORY[(event.point.id.match(new RegExp("_", "g")) ).length-1].name
     		};
 
     		return parameters;

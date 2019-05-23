@@ -22,7 +22,7 @@ angular.module('chart-tab', [])
 		restrict: 'AE',
 		replace: true,
 		templateUrl: function(){
-		      return sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/chart-tab/chart-tab.html'
+		      return sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/chart-tab/chart-tab.html'
 	      },
 		controller: chartTabControllerFunction
 	}
@@ -202,7 +202,7 @@ function chartTabControllerFunction($scope,$timeout,sbiModule_translate,sbiModul
 
 			} else {
 
-				$scope.chartTemplate = StructureTabService.getBaseTemplate();
+				$scope.chartTemplate = StructureTabService.getBaseTemplate('bar');
 				$scope.chartTemplate.alpha = chartEngineSettings.tree_D_Options.alpha;
 				$scope.chartTemplate.beta = chartEngineSettings.tree_D_Options.beta;
 				$scope.chartTemplate.depth = chartEngineSettings.tree_D_Options.depth;
@@ -234,7 +234,7 @@ function chartTabControllerFunction($scope,$timeout,sbiModule_translate,sbiModul
 			}
 			else {
 
-				$scope.chartTemplate = StructureTabService.getBaseTemplate();
+				$scope.chartTemplate = StructureTabService.getBaseTemplate('bar');
 				/*
 					@author: radmila.selakovic@mht.net
 					adding options for 3D
@@ -466,7 +466,7 @@ function chartTabControllerFunction($scope,$timeout,sbiModule_translate,sbiModul
 			break;
 		case 'line':
 			serie = $scope.chartTemplate.VALUES.SERIE;
-			angular.copy(StructureTabService.getBaseTemplate(), $scope.chartTemplate);
+			angular.copy(StructureTabService.getBaseTemplate(chart), $scope.chartTemplate);
 			$scope.chartTemplate.type="LINE";
 			$scope.chartTemplate.isCockpitEngine = $scope.isCockpitEng;
 			$scope.chartTemplate.VALUES.SERIE = serie;
@@ -491,7 +491,7 @@ function chartTabControllerFunction($scope,$timeout,sbiModule_translate,sbiModul
 			break;
 		case 'bar':
 			serie = $scope.chartTemplate.VALUES.SERIE;
-			angular.copy(StructureTabService.getBaseTemplate(), $scope.chartTemplate);
+			angular.copy(StructureTabService.getBaseTemplate(chart), $scope.chartTemplate);
 			$scope.chartTemplate.VALUES.SERIE = serie;
 			$scope.chartTemplate.alpha = chartEngineSettings.tree_D_Options.alpha;
 			$scope.chartTemplate.beta = chartEngineSettings.tree_D_Options.beta;
@@ -501,7 +501,7 @@ function chartTabControllerFunction($scope,$timeout,sbiModule_translate,sbiModul
 			break;
 		case 'pie':
 			serie = $scope.chartTemplate.VALUES.SERIE;
-			angular.copy(StructureTabService.getBaseTemplate(), $scope.chartTemplate);
+			angular.copy(StructureTabService.getBaseTemplate(chart), $scope.chartTemplate);
 			$scope.chartTemplate.type="PIE";
 			$scope.chartTemplate.alpha = chartEngineSettings.tree_D_Options.alpha;
 			$scope.chartTemplate.beta = chartEngineSettings.tree_D_Options.beta;

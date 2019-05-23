@@ -262,22 +262,22 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 
 	this.getTemplateURLs = function(){
 		var data = {
-				genericDetailsURL:	sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/generic_details.html',
-				titleSubtitleDetailsURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/title_and_subtitle.html',
-				noDataDetailsURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/nodata.html',
-				legendTitleURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/legend_title.html',
-				legendItemsURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/legend_items.html',
-				colorPaletteURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/color_palette.html',
-				paneURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/pane.html',
-				ticksURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/ticks.html',
-				wordSettingsURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/word_settings.html',
-				limitURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/limit.html',
-				axisLinesURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/axis_lines.html',
-				tooltipURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/tooltip.html',
-				sequenceURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/sequence.html',
-				explanationURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/explanation.html',
-				advancedSerieBarURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/advanced_serie_conf_bar.html',
-				customColorsURL: sbiModule_config.contextName + '/js/src/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/custom_colors.html',
+				genericDetailsURL:	sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/generic_details.html',
+				titleSubtitleDetailsURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/title_and_subtitle.html',
+				noDataDetailsURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/nodata.html',
+				legendTitleURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/legend_title.html',
+				legendItemsURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/legend_items.html',
+				colorPaletteURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/color_palette.html',
+				paneURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/pane.html',
+				ticksURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/ticks.html',
+				wordSettingsURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/word_settings.html',
+				limitURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/limit.html',
+				axisLinesURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/axis_lines.html',
+				tooltipURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/tooltip.html',
+				sequenceURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/sequence.html',
+				explanationURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/explanation.html',
+				advancedSerieBarURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/advanced_serie_conf_bar.html',
+				customColorsURL: sbiModule_config.dynamicResourcesEnginePath + '/angular_1.4/chart/designer/directives/custom_directives/configuration-tab/custom_colors.html',
 
 			 };
 		return data;
@@ -290,7 +290,7 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 
 		var translate = sbiModule_translate;
 
-	this.getBaseTemplate = function() {
+	this.getBaseTemplate = function(type) {
 		var barLine  = {
 				   "CHART":{
 					      "TITLE":{
@@ -359,13 +359,11 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 					              }
 					         ]
 					      },
-					      "type":"BAR",
-					      "alignAxis": true,
+
 					      "AXES_LIST":{
 					    	  "AXIS":[
 					    		  {
-					    		   "plotBands":[{"label":{"text": "","align": "center"},"color":"","from":0,"to":0}],
-					    		   "plotLines": [{"label":{"text": "","align": "center"},"color": "","dashStyle": "","value":0,"width":0}],
+
 					               "id":"Y",
 					               "alias":"Y",
 					               "type":"Serie",
@@ -398,54 +396,9 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 					                	  "color":""
 					                  }
 					               },
-					               "TITLE":{
-					                  "text":"",
-					                  "style":{
-					                	  "align":"",
-					                	  "color":"",
-					                	  "fontFamily":"",
-					                	  "fontWeight":"",
-					                	  "fontSize":""
-					                  }
-					               },
-					               "TITLESERIE":{
-					            	   "showTitle": false,
-					            	   "style":{
-						                	  "align":"",
-						                	  "color":"",
-						                	  "fontFamily":"",
-						                	  "fontWeight":"",
-						                	  "fontSize":""
-						                  }
-						               }
+
 					            },
-					            {
-					               "plotBands":[{"label":{"text": "","align": "center"},"color":"","from":0,"to":0}],
-					               "plotLines": [{"label":{"text": "","align": "center"},"color": "","dashStyle": "","value":0,"width":0}],
-					               "id":"X",
-					               "alias":"X",
-					               "type":"Category",
-					               "position":"",
-					               "step" : "",
-					               "style":{
-					            	   "rotate":"",
-					            	   "align":"",
-					            	   "color":"",
-					            	   "fontFamily":"",
-					            	   "fontSize":"",
-					            	   "fontWeight":""
-					               },
-					               "TITLE":{
-						                  "text":"",
-						                  "style":{
-						                	  "align":"",
-						                	  "color":"",
-						                	  "fontFamily":"",
-						                	  "fontWeight":"",
-						                	  "fontSize":""
-						                  }
-						               }
-					            }
+
 					         ]
 					      },
 					      "COLORPALETTE":{
@@ -492,6 +445,7 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 					         "layout":"",
 					         "position":"top",
 					         "show":false,
+					         "showCheckboxes":true,
 					         "style":{
 			                	  "align":"",
 			                	  "color":"",
@@ -521,13 +475,91 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 			              "depth":  0,
 			              "viewDistance":  0,
 			              "show3D" : false,
-			              "groupCategories" : false,
-			              "groupSeries" : false,
-			              "groupSeriesCateg" : false,
-			              "dateTime":false,
-			              "dateFormat":"day"
+
 					   }
 					}
+
+
+		var titleSerie = {
+     	   "showTitle": false,
+    	   "style":{
+            	  "align":"",
+            	  "color":"",
+            	  "fontFamily":"",
+            	  "fontWeight":"",
+            	  "fontSize":""
+              }
+           }
+
+           var chartType = type.toUpperCase();
+
+		   var tempPlots = {
+			   "plotBands":[{"label":{"text": "","align": "center"},"color":"","from":0,"to":0}],
+	    	   "plotLines": [{"label":{"text": "","align": "center"},"color": "","dashStyle": "","value":0,"width":0}]
+			}
+
+           var tempXAxis = {
+	               "plotBands":tempPlots.plotBands,
+		    	   "plotLines": tempPlots.plotLines,
+	               "id":"X",
+	               "alias":"X",
+	               "type":"Category",
+	               "position":"",
+	               "step" : "",
+	               "style":{
+	            	   "rotate":"",
+	            	   "align":"",
+	            	   "color":"",
+	            	   "fontFamily":"",
+	            	   "fontSize":"",
+	            	   "fontWeight":""
+	               },
+	               "TITLE":{
+		                  "text":"",
+		                  "style":{
+		                	  "align":"",
+		                	  "color":"",
+		                	  "fontFamily":"",
+		                	  "fontWeight":"",
+		                	  "fontSize":""
+		                  }
+		               }
+	            }
+
+           var axisTitle = {
+
+	                  "text":"",
+	                  "style":{
+	                	  "align":"",
+	                	  "color":"",
+	                	  "fontFamily":"",
+	                	  "fontWeight":"",
+	                	  "fontSize":""
+		                  }
+		               };
+
+
+			if(type == 'PIE'){
+
+				barLine.CHART.AXES_LIST.AXIS[0].TITLESERIE = titleSerie;
+				barLine.CHART.type = chartType;
+			}else {
+
+				barLine.CHART.type = chartType;
+				barLine.CHART.alignAxis = {"alignAxis": true};
+				barLine.CHART.AXES_LIST.AXIS[0].plotBands = tempPlots.plotBands;
+				barLine.CHART.AXES_LIST.AXIS[0].plotLines = tempPlots.plotLines;
+				barLine.CHART.AXES_LIST.AXIS.push(tempXAxis);
+				barLine.CHART.AXES_LIST.AXIS[0].TITLE = axisTitle;
+				barLine.CHART.groupCategories = false;
+				barLine.CHART.groupSeries = false;
+				barLine.CHART.groupSeriesCateg = false;
+				barLine.CHART.dateTime = false;
+				barLine.CHART.dateFormat = "day";
+				barLine.CHART.hideAxisTitleSerie = true;
+				barLine.CHART.hideAxisTitleCategory = true;
+			}
+
 		return barLine.CHART;
 	}
 
@@ -2391,53 +2423,53 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 		var templatesURLs = "";
 
 		switch(detailsForOption) {
-			case "seriesItemConfig": templatesURLs = sbiModule_config.contextName +
-										"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/series_item_config_details.html"; break;
-			case "seriesItemTooltip": templatesURLs = sbiModule_config.contextName +
-										"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/series_item_tooltip_details.html"; break;
-			case "axisConfiguration": templatesURLs = sbiModule_config.contextName +
-										"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/axis_configuration_details.html"; break;
-			case "axisTitleConfiguration": templatesURLs = sbiModule_config.contextName +
-										"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/axis_title_details.html"; break;
-			case "axisMajorGridConfiguration": templatesURLs = sbiModule_config.contextName +
-										"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/axis_majorgrid_details.html"; break;
-			case "axisMinorGridConfiguration": templatesURLs = sbiModule_config.contextName +
-										"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/axis_minorgrid_details.html"; break;
-			case "categoriesAxisDetails": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/categories_axis_configuration_details.html"; break;
+			case "seriesItemConfig": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+										"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/series_item_config_details.html"; break;
+			case "seriesItemTooltip": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+										"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/series_item_tooltip_details.html"; break;
+			case "axisConfiguration": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+										"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/axis_configuration_details.html"; break;
+			case "axisTitleConfiguration": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+										"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/axis_title_details.html"; break;
+			case "axisMajorGridConfiguration": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+										"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/axis_majorgrid_details.html"; break;
+			case "axisMinorGridConfiguration": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+										"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/axis_minorgrid_details.html"; break;
+			case "categoriesAxisDetails": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/categories_axis_configuration_details.html"; break;
 
-			case "categoriesAxisTitleDetails": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/categories_axis_title_details.html"; break;
+			case "categoriesAxisTitleDetails": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/categories_axis_title_details.html"; break;
 
-			case "categoriesOrdering": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/ordering_column.html"; break;
+			case "categoriesOrdering": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/ordering_column.html"; break;
 
-			case "categoriesDateTime": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/categories_DateTime.html"; break;
+			case "categoriesDateTime": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/categories_DateTime.html"; break;
 
-			case "categoriesDateTimeHeatMap": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/categories_DateTime.html"; break;
+			case "categoriesDateTimeHeatMap": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/categories_DateTime.html"; break;
 
-			case "additionalParameters": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/additional_parameters.html"; break;
+			case "additionalParameters": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/additional_parameters.html"; break;
 
-			case "mainTick": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/main_tick.html"; break;
+			case "mainTick": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/main_tick.html"; break;
 
-			case "minorTick": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/minor_tick.html"; break;
+			case "minorTick": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/minor_tick.html"; break;
 
-			case "gaugeLabels": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/labels.html"; break;
+			case "gaugeLabels": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/labels.html"; break;
 
-			case "plotbands": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/plotbands.html"; break;
+			case "plotbands": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/plotbands.html"; break;
 
-			case "serieTitle": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/serie_title_details.html"; break;
+			case "serieTitle": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/serie_title_details.html"; break;
 
-			case "gaugeSubtypes": templatesURLs = sbiModule_config.contextName +
-			"/js/src/angular_1.4/chart/designer/directives/custom_directives/structure-tab/gauge_subtypes.html"; break;
+			case "gaugeSubtypes": templatesURLs = sbiModule_config.dynamicResourcesEnginePath +
+			"/angular_1.4/chart/designer/directives/custom_directives/structure-tab/gauge_subtypes.html"; break;
 
 
 		};
@@ -2541,13 +2573,13 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 			var chartConf = eval("(" + response.data + ")");
 
 			var chartType = chartConf.chart.type;
-			var d3Types = ["sunburst","parallel","wordcloud","chord"];
-			var highSpec = ["heatmap", "treemap"]
+			var d3Types = ["parallel","wordcloud","chord"];
+			var highSpec = ["heatmap", "treemap","sunburst"]
 			var lib = "d3js244";
 			if(d3Types.indexOf(chartType.toLowerCase())>=0){
 				lib = "d3js244"
 			} else {
-				lib="highcharts414"
+				lib="highcharts"
 			}
 			var encoded = {};
 			var prepareDataForRequest = function (){
@@ -2590,7 +2622,7 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 			}
 			if(d3Types.indexOf(chartType.toLowerCase())>=0 || highSpec.indexOf(chartType.toLowerCase())>=0){
 				var chartInitializer = chartInitializerRetriver.getChartInitializer(lib);
-				if(lib=="highcharts414"){
+				if(lib=="highcharts"){
 					var renderObj = {};
 					renderObj.chartConf = chartConf;
 					renderObj.exportWebApp = true;
@@ -2656,7 +2688,7 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 			angular.copy(StructureTabService.getGaugeTemplate(), baseTemplate);
 			break;
 		case 'line':
-			angular.copy(StructureTabService.getBaseTemplate(), baseTemplate);
+			angular.copy(StructureTabService.getBaseTemplate(type), baseTemplate);
 			baseTemplate.type="LINE";
 			break;
 		case 'heatmap':
@@ -2666,10 +2698,10 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 			angular.copy(StructureTabService.getRadarTemplate(), baseTemplate);
 			break;
 		case 'bar':
-			angular.copy(StructureTabService.getBaseTemplate(), baseTemplate);
+			angular.copy(StructureTabService.getBaseTemplate(type), baseTemplate);
 			break;
 		case 'pie':
-			angular.copy(StructureTabService.getBaseTemplate(), baseTemplate);
+			angular.copy(StructureTabService.getBaseTemplate(type), baseTemplate);
 			baseTemplate.type="PIE";
 			break;
 		case 'chord':
@@ -2678,10 +2710,9 @@ angular.module('ChartDesignerService', ['chartRendererModule'])
 		default:
 			break;
 		}
-		getObjectProperties(baseTemplate, originalTemplate.CHART)
-		baseTemplate.VALUES.CATEGORY=originalTemplate.CHART.VALUES.CATEGORY
-		baseTemplate.VALUES.SERIE=originalTemplate.CHART.VALUES.SERIE
-
+			originalTemplate.CHART = angular.merge(baseTemplate,originalTemplate.CHART)
+			baseTemplate.VALUES.CATEGORY=originalTemplate.CHART.VALUES.CATEGORY
+			baseTemplate.VALUES.SERIE=originalTemplate.CHART.VALUES.SERIE
 
 		return {"CHART":baseTemplate};
 	}

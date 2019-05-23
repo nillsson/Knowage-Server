@@ -26,7 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <meta name="apple-mobile-web-app-title" content="Knowage">
 <link rel="manifest" href="<%=urlBuilder.getResourceLink(request,"/manifest.json")%>">
 
-<link rel="stylesheet" href="<%=urlBuilder.getResourceLink(request,"/themes/sbi_default/fonts/font-awesome-4.4.0/css/font-awesome.min.css")%>">
+<link rel="stylesheet" href="<%=urlBuilder.getResourceLink(request,"/node_modules/font-awesome/css/font-awesome.min.css")%>">
 
 
 <!-- angular reference-->
@@ -158,7 +158,7 @@ if(importAngularMaterialForExport == null) {
 <script type="text/javascript" src="<%=urlBuilder.getResourceLink(request, "js/src/angular_1.4/tools/scheduler/dataset-scheduler/datasetSchedulerModule.js")%>"></script>
 <script type="text/javascript" src="<%=urlBuilder.getResourceLink(request, "js/src/angular_1.4/tools/scheduler/dataset-scheduler/datasetScheduler.js")%>"></script>
 <script type="text/javascript" src="<%=urlBuilder.getResourceLink(request, "js/src/angular_1.4/tools/scheduler/dataset-scheduler/datasetScheduler_service.js")%>"></script>
-
+<script type="text/javascript" src="<%=urlBuilder.getResourceLink(request, "js/src/angular_1.4/tools/scheduler/dataset-scheduler/schedulerTimeUnit.js")%>"></script>
 <!-- xml2js -->
 
 
@@ -180,6 +180,6 @@ if(importAngularMaterialForExport == null) {
 <%@include file="/WEB-INF/jsp/commons/angular/sbiModule.jspf"%>
 
 <!-- AG GRID -->
-<script type="text/javascript" src="<%=urlBuilder.getResourceLink(request,"/node_modules/ag-grid/dist/ag-grid.min.js")%>"></script>
-<script type="text/javascript" src="<%= GeneralUtilities.getSpagoBiContext() %>/js/src/angular_1.4/tools/commons/services/knModule_aggridLabels.js"></script>
+<script type="text/javascript" src="<%=urlBuilder.getResourceLink(request,"/node_modules/ag-grid-community/dist/ag-grid-community.min.js")%>"></script>
+<script type="text/javascript" src="<%=urlBuilder.getResourceLink(request,"/js/src/angular_1.4/tools/commons/services/knModule_aggridLabels.js")%>"></script>
 	

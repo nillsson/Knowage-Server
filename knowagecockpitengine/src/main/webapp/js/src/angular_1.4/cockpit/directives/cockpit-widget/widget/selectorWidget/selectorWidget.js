@@ -184,9 +184,6 @@ angular.module('cockpitModule')
 
 		$scope.init=function(element,width,height){
 			$scope.refreshWidget(null, 'init');
-			$timeout(function(){
-				$scope.widgetIsInit=true;
-			},500);
 
 		}
 
@@ -243,6 +240,12 @@ angular.module('cockpitModule')
 				}, 0);
 			}
 			
+			if(nature == 'init'){
+				$timeout(function(){
+					$scope.widgetIsInit=true;
+					cockpitModule_properties.INITIALIZED_WIDGETS.push($scope.ngModel.id);
+				},500);
+			}
 		}
 		
         $scope.mobilecheck = function() {
@@ -259,26 +262,48 @@ angular.module('cockpitModule')
         		parent: angular.element(document.body),
         		targetEvent: ev,
         		clickOutsideToClose:true,
-        		locals: {selectables:$scope.ngModel.activeValues, itemsList:$scope.datasetRecords.rows, activeSelections: $scope.selectedValues, targetModel: $scope.ngModel.content, settings:$scope.ngModel.settings}
+        		locals: {
+        			selectables:$scope.ngModel.activeValues, 
+        			itemsList:$scope.datasetRecords.rows, 
+        			activeSelections: $scope.selectedValues, 
+        			targetModel: $scope.ngModel.content, 
+        			settings:$scope.ngModel.settings,
+        			title:($scope.ngModel.style.title && $scope.ngModel.style.title.label) ? $scope.ngModel.style.title.label : $scope.ngModel.content.name
+        		}
 	  		}).then(function(selectedFields) {
 	  			$scope.toggleParameter(selectedFields);
 	  			},function(error){});
         	}
         	
-    	function MultiSelectDialogController(scope, $mdDialog, sbiModule_translate, targetModel, selectables, activeSelections, itemsList, settings) {
+    	function MultiSelectDialogController(scope, $mdDialog, sbiModule_translate, targetModel, selectables, activeSelections, itemsList, settings, title) {
     		scope.settings = settings;
+    		scope.title = title;
     		scope.translate = sbiModule_translate;
         	scope.selectables = [];
         	scope.allSelected = false;
-        	if(settings.hideDisabled) {
-        		for(var k in selectables){
-        			scope.selectables.push({name: selectables[k], selected: (activeSelections && activeSelections.indexOf(selectables[k].column_1) != -1) ? true : false });
-        		}
-        	}else {
-        		for(var j in itemsList){
-        			scope.selectables.push({name: itemsList[j].column_1, selected: (activeSelections && activeSelections.indexOf(itemsList[j].column_1) != -1) ? true : false });
-        		}
-        	 }
+        	if(settings.hideDisabled){
+				if(selectables){
+					for(var k in selectables){
+						scope.selectables.push({name: selectables[k], selected: (activeSelections && activeSelections.indexOf(selectables[k]) != -1) ? true : false});
+					}
+				}else{
+					for(var j in itemsList){
+						if(activeSelections.length > 0){
+							if(activeSelections.indexOf(itemsList[j].column_1) != -1){
+								scope.selectables.push({name: itemsList[j].column_1, selected: true});
+							}
+						}else {
+							scope.selectables.push({name: itemsList[j].column_1, selected: false});
+						}
+						
+					}
+				}
+			}else{
+				for(var j in itemsList){
+					scope.selectables.push({name: itemsList[j].column_1, selected: (activeSelections && activeSelections.indexOf(itemsList[j].column_1) != -1) ? true : false});
+				}
+			}
+        	
         	scope.targetColumn = targetModel.selectedColumn;
         	scope.close = function() {
 	        	scope.selectablesToSend = scope.selectables.reduce(function(result, element) {
@@ -372,7 +397,7 @@ angular.module('cockpitModule')
 		};
 
 		$scope.toggleParameter = function(parVal) {
-			if($scope.ngModel.settings.modalityPresent=="COMBOBOX"){
+			if($scope.ngModel.settings.modalityPresent=="COMBOBOX" && $scope.ngModel.settings.modalityValue!='multiValue'){
 				if(angular.equals(parVal, $scope.oldSelectedValues)){
 					return;
 				}
@@ -445,6 +470,7 @@ angular.module('cockpitModule')
 
 	    $scope.deleteSelections = function(item){
 	    	var reloadAss=false;
+	    	var associatedDatasets = [];
 	    	var reloadFilt=[];
 
 	    	if(item.aggregated){
@@ -456,6 +482,7 @@ angular.module('cockpitModule')
 						if(selection){
 							delete selection[key];
 							reloadAss=true;
+							associatedDatasets.push(item.ds);
 						}
 					}
 				}
@@ -467,19 +494,18 @@ angular.module('cockpitModule')
 						if(Object.keys(cockpitModule_template.configuration.filters[item.ds]).length==0){
 							delete cockpitModule_template.configuration.filters[item.ds];
 						}
-
-						reloadFilt.push(item.ds);
+                        if(reloadFilt.indexOf(item.ds) == -1){
+						    reloadFilt.push(item.ds);
+                        }
 					}
 				}
 			}
 
 			if(reloadAss){
-				$scope.cockpitModule_widgetSelection.getAssociations(true);
+				$scope.cockpitModule_widgetSelection.getAssociations(true,undefined,undefined,associatedDatasets);
 			}
 
-			if(!reloadAss && reloadFilt.length!=0){
-				$scope.cockpitModule_widgetSelection.refreshAllWidgetWhithSameDataset(reloadFilt);
-			}
+			cockpitModule_widgetSelection.removeTimestampedSelection(item.ds, item.columnName);
 
 			var hs=false;
 			for(var i=0; i<cockpitModule_template.configuration.aggregations.length; i++){
@@ -492,6 +518,12 @@ angular.module('cockpitModule')
 			if(hs==false && Object.keys(cockpitModule_template.configuration.filters).length==0){
 				cockpitModule_properties.HAVE_SELECTIONS_OR_FILTERS=false;
 			}
+
+			setTimeout(function() {
+                for(var i in reloadFilt){
+                    cockpitModule_widgetSelection.refreshAllWidgetWhithSameDataset(reloadFilt[i]);
+                }
+            }, 0);
 	    }
 
 	    $scope.editWidget=function(index){

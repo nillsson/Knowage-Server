@@ -90,22 +90,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 				if (UserUtilities.haveRoleAndAuthorization(profile, SpagoBIConstants.ADMIN_ROLE_TYPE, new String[0])
 						|| UserUtilities.haveRoleAndAuthorization(profile, SpagoBIConstants.ROLE_TYPE_DEV, new String[0])) {
 			%>
-			<md-menu  style="padding: 0;"> <md-button
-				aria-label="Create new document" class="md-fab md-mini"
-				style="top: 0;" ng-click="$mdOpenMenu($event)"> <md-icon
-				md-menu-origin md-font-icon="fa fa-plus" class="md-primary"></md-icon>
-			</md-button> <md-menu-content width="4"> <md-menu-item>
-			<md-button ng-click="newDocument();" tabindex="1"> <md-icon
-				md-font-icon="fa fa-plus" md-menu-align-target></md-icon>
-			{{translate.load("sbi.generic.document.add.traditional")}} </md-button> </md-menu-item> <%
-		 	if (UserUtilities.haveRoleAndAuthorization(profile, SpagoBIConstants.ADMIN_ROLE_TYPE, new String[] {SpagoBIConstants.CREATE_COCKPIT_FUNCTIONALITY})
+			<md-menu ng-if="selectedFolder && selectedFolder.parentId != null" class="noPadding">
+				<md-button aria-label="Create new document" class="md-fab md-mini" style="top: 0;" ng-click="$mdOpenMenu($event)">
+					<md-icon md-menu-origin md-font-icon="fa fa-plus" class="md-primary">
+					</md-icon>
+				</md-button>
+				<md-menu-content width="4"> 
+					<md-menu-item>
+						<md-button ng-click="newDocument();" tabindex="1"> 
+						<md-icon md-font-icon="fa fa-plus" md-menu-align-target>
+						</md-icon>
+							{{translate.load("sbi.generic.document.add.traditional")}} 
+						</md-button> 
+					</md-menu-item> <%
+		 				if (UserUtilities.haveRoleAndAuthorization(profile, SpagoBIConstants.ADMIN_ROLE_TYPE, new String[] {SpagoBIConstants.CREATE_COCKPIT_FUNCTIONALITY})
 		 				|| UserUtilities.haveRoleAndAuthorization(profile, SpagoBIConstants.ROLE_TYPE_DEV, new String[] {SpagoBIConstants.CREATE_COCKPIT_FUNCTIONALITY})) {
-		 %> <md-menu-item> <md-button
-				ng-click="newDocument('cockpit');"> <md-icon
-				md-font-icon="fa fa-plus" md-menu-align-target></md-icon>
-			{{translate.load("sbi.generic.document.add.adhocCockpit")}} </md-button> </md-menu-item> <%
-		 	}
-		 %> </md-menu-content> </md-menu>
+				 %> <md-menu-item> 
+				 <md-button	ng-click="newDocument('cockpit');">
+				 	<md-icon md-font-icon="fa fa-plus" md-menu-align-target>
+				 	</md-icon>
+					{{translate.load("sbi.generic.document.add.adhocCockpit")}} </md-button>
+					</md-menu-item> <%
+		 			}
+		 %> 	</md-menu-content> 
+			 </md-menu>
 			<%
 				}
 			%>
@@ -114,7 +122,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	<md-content layout="row" flex>
 			<md-sidenav class="md-sidenav-left md-whiteframe-4dp" md-component-id="left" md-is-locked-open="$mdMedia('gt-xs')" ng-show="searchDocuments==0">
 				<md-content> 
-					<document-tree ng-model="folders" highlights-selected-item="true" create-tree="true" selected-item="selectedFolder" click-function="setSelectedFolder(item)"></document-tree>
+					<document-tree ng-model="folders" personal-folders="{{::translate.load('sbi.generic.personalFolders')}}" highlights-selected-item="true" create-tree="true" selected-item="selectedFolder" click-function="setSelectedFolder(item)" translate="false"></document-tree>
 				</md-content>
 			</md-sidenav> 
 			<md-content flex layout="column" class="mainContent"> 
@@ -213,7 +221,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 			</div>
 		</md-toolbar> 
 		<md-content layout-margin>
+			<div class="selectedDocumentPreview" ng-if="selectedDocument.previewFile" layout-padding>
+				<img ng-src="{{tempPreviewSrc}}" />
+			</div>
 			<md-list> 
+				<md-list-item class="md-2-line">
+					<div class="md-list-item-text">
+						<h3>
+							<b>{{translate.load("sbi.generic.author")}}</b>
+						</h3>
+						<p>{{selectedDocument.creationUser}}</p>
+					</div>
+				</md-list-item>
 				<md-list-item class="md-2-line" ng-if="selectedDocument.description">
 					<div class="md-list-item-text " flex>
 						<h3> <b>{{translate.load("sbi.generic.descr")}}</b> </h3>
@@ -244,6 +263,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 						<p>{{selectedDocument.creationDate | asDate | date:'medium' }}</p>
 					</div>
 				</md-list-item> 
+				<md-list-item class="md-2-line">
+					<div class="md-list-item-text">
+						<h3>
+							<b>{{translate.load("sbi.generic.visibility")}}</b>
+						</h3>
+						<p>{{selectedDocument.visible ? translate.load("sbi.generic.visible") : translate.load("sbi.generic.notvisible")}}</p>
+					</div>
+				</md-list-item>
 			</md-list>
 		</md-content>
 	</md-sidenav> 

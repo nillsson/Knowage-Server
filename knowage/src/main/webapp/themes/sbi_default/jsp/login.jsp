@@ -240,6 +240,7 @@
 				
 				
                 <button class="btn btn-lg btn-primary btn-block btn-signin" type="submit"><%=msgBuilder.getMessage("login")%></button>
+                </form>
                 <% 
 				if (activeSignup){ %>
                 <button class="btn btn-lg btn-primary btn-block btn-signup" onclick="signup();" ><%=msgBuilder.getMessage("signup")%></button>
@@ -271,7 +272,7 @@
 			<!-- <div class="col-sm-6"><a class="lightLink" href="<%=contextName %>/ChangePwdServlet?start_url=<%=startUrl%>">	<%=msgBuilder.getMessage("changePwd")%> </a></div> -->
 		</div>
 		
-     </form><!-- /form -->
+     <!-- /form -->
 	 <spagobi:error/>
   </div><!-- /card-container -->
 </div><!-- /container -->

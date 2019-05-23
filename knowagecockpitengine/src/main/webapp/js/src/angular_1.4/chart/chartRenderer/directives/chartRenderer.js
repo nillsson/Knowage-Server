@@ -70,7 +70,7 @@ angular.module('chartRendererModule')
 							delete scope.chartTemplate.CHART.COLORPALETTE.COLORCopy
 						}
 
-						if(scope.chartTemplate.CHART.groupSeriesCateg && scope.chartConf.series.length > 0){
+						if(scope.chartTemplate.CHART.groupSeriesCateg && scope.chartConf.series && scope.chartConf.series.length > 0){
 							scope.chartConf.colorsCopy = angular.copy(scope.chartConf.colors);
 							if(scope.colorMap){
 								if(Object.keys(scope.colorMap).length<=scope.chartConf.series.length){
@@ -85,8 +85,10 @@ angular.module('chartRendererModule')
 									}
 								}
 								scope.chartConf.colors = angular.copy(scope.chartConf.colorsCopy);
-								if(scope.colorMap.hasOwnProperty(scope.chartConf.series[0].name)) {
-									scope.chartConf.colors[0]=scope.colorMap[chartConf.series[0].name];
+								for (var i = 0; i < scope.chartConf.series.length; i++) {
+									if(scope.colorMap.hasOwnProperty(scope.chartConf.series[i].name)) {
+										scope.chartConf.colors[i]=scope.colorMap[chartConf.series[i].name];
+									} 
 								}
 							} else {
 								scope.colorMap = {};
@@ -158,10 +160,10 @@ angular.module('chartRendererModule')
 
 				}
 
-			scope.$on('refresh',function(event,data,isRealtime,changedChartType,chartConf,selectionsAndParams){
+			scope.$on('refresh',function(event,data,isRealtime,changedChartType,chartConf,selectionsAndParams, shouldUpdate){
 				if(scope.updateble){
 					var dataForSending = isRealtime ? data : eval("(" + data.jsonData + ")");
-					if(scope.chartInitializer != undefined && scope.chartInitializer.updateData){
+					if(scope.chartInitializer != undefined && scope.chartInitializer.updateData && !shouldUpdate){
 						scope.updateChart(scope.widgetData,dataForSending);
 					}else{
 						var transformedData = dataForSending;
@@ -175,8 +177,12 @@ angular.module('chartRendererModule')
 				}
 			})
 
-			scope.$on('changeChartType',function(){
-				scope.chartTemplate =  ChartUpdateService.getTemplate( scope.chartTemplate);
+			scope.$on('changeChartType',function(event,data){
+
+				if(!data.isOriginal){
+					scope.chartTemplate =  ChartUpdateService.getTemplate( scope.chartTemplate);
+				}
+
 				scope.$emit('changedChartType',scope.chartTemplate);
 			})
 
@@ -230,8 +236,20 @@ angular.module('chartRendererModule')
 
 			scope.$on('fullExpand',function(event,data,isRealtime,changedChartType,chartConf,selectionsAndParams){
 
+				if((scope.chartConf.chart.type == "bar" || scope.chartConf.chart.type == "column" ||
+				   scope.chartConf.chart.type == "line" || scope.chartConf.chart.type == "radar" ||
+				   scope.chartConf.chart.type == "scatter")  && scope.chartConf.series.length > 0){
+					for( var i=0 ; i < scope.chartConf.series.length ; i++ ){
+
+						if(scope.chartConf.series[i].data[0].dataLabels){
+							scope.chartConf.series[i].selected = scope.chartConf.series[i].data[0].dataLabels.enabled;
+						}
+
+					}
+				}
 
 				scope.renderChart(scope.chartConf,data,selectionsAndParams);
+
 
 			})
 

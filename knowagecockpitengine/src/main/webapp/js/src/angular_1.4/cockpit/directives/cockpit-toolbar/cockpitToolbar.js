@@ -42,7 +42,7 @@ angular.module('cockpitModule')
 	   }
 });
 
-function cockpitToolbarControllerFunction($scope,cockpitModule_datasetServices,cockpitModule_widgetServices,cockpitModule_properties,cockpitModule_template,$mdDialog,sbiModule_translate,sbiModule_restServices,cockpitModule_gridsterOptions,$mdPanel,cockpitModule_widgetConfigurator,$mdToast,cockpitModule_generalServices,cockpitModule_widgetSelection,$rootScope){
+function cockpitToolbarControllerFunction($scope,$timeout,$q,windowCommunicationService,cockpitModule_datasetServices,cockpitModule_widgetServices,cockpitModule_properties,cockpitModule_template,$mdDialog,sbiModule_translate,sbiModule_restServices,cockpitModule_gridsterOptions,$mdPanel,cockpitModule_widgetConfigurator,$mdToast,cockpitModule_generalServices,cockpitModule_widgetSelection,$rootScope){
 	$scope.translate = sbiModule_translate;
 	$scope.cockpitModule_properties=cockpitModule_properties;
 	$scope.cockpitModule_template=cockpitModule_template;
@@ -192,6 +192,14 @@ function cockpitToolbarControllerFunction($scope,cockpitModule_datasetServices,c
 						class: "fa fa-table",
 						type : "table"
 					},{
+						name:"Advanced Table",
+						description: $scope.translate.load("sbi.cockpit.editor.newwidget.description.table"),
+						tags : ["advanced"],
+						img : "5.png",
+						class: "fa fa-table",
+						beta: true,
+						type : "advanced-table"
+					},{
 						name:"Cross Table",
 						description: $scope.translate.load("sbi.cockpit.editor.newwidget.description.cross"),
 						tags : ["table","pivot","cross"],
@@ -206,13 +214,13 @@ function cockpitToolbarControllerFunction($scope,cockpitModule_datasetServices,c
 						class: "fa fa-file",
 						type : "document"
 					},{
-                                      name:"Map",
-                                      description: $scope.translate.load("sbi.cockpit.editor.newwidget.description.map"),
-                                      tags : ["map"],
-                                      img : "7.png",
-                                      class: "fa fa-map",
-                                      type : "map"
-                                  },{
+	                    name:"Map",
+	                    description: $scope.translate.load("sbi.cockpit.editor.newwidget.description.map"),
+	                    tags : ["map"],
+	                    img : "7.png",
+	                    class: "fa fa-map",
+	                    type : "map"
+	                },{
 						name:"Active Selections",
 						description: $scope.translate.load("sbi.cockpit.editor.newwidget.description.selection"),
 						tags : ["selection"],
@@ -252,7 +260,127 @@ function cockpitToolbarControllerFunction($scope,cockpitModule_datasetServices,c
 	}
 	$scope.isFromNewCockpit= cockpitModule_generalServices.isFromNewCockpit();
 	
+	var handler = {};
+	handler.handleMessage = function(message){
+		if(message == 'pdfExport') $scope.exportPdf();
+	}
+
+	windowCommunicationService.addMessageHandler(handler);
 	
+	$scope.exportPdf = function(){
+		
+		return $q(function(resolve, reject) {
+			cockpitModule_properties.LOADING_SCREENSHOT = true;
+			$mdDialog.show({
+				controller: function($scope,cockpitModule_properties,cockpitModule_template, sbiModule_translate){
+					$scope.translate = sbiModule_translate;
+					$scope.cockpitModule_properties = cockpitModule_properties;
+					$scope.cockpitModule_template = cockpitModule_template;
+				 },
+				 templateUrl: baseScriptPath+ '/directives/cockpit-toolbar/templates/exportPdfDialogTemplate.html',
+				 parent: angular.element(document.body),
+				 hasBackdrop: false,
+				 clickOutsideToClose:false
+				 })
+				 
+				 function closeOrContinue(sheet){
+					if(sheet.index + 1 == cockpitModule_template.sheets.length) {
+		 				doc.save(cockpitModule_properties.DOCUMENT_LABEL+'.pdf');
+		 				$mdDialog.hide();
+		 				cockpitModule_properties.LOADING_SCREENSHOT = false;
+		 				resolve();
+		 			}
+		 			else {
+		 				document.querySelector(".sheetPageButton-"+(sheet.index+1)).parentNode.click();
+		 				for(var y in cockpitModule_template.sheets){
+		 					if(cockpitModule_template.sheets[y].index == sheet.index + 1){
+		 						getScreenshot(cockpitModule_template.sheets[y]);
+		 						break;
+		 					}
+		 				}
+		 				
+		 			}
+				}
+				          
+				 function getScreenshot(sheet){
+				 $scope.sheetsWidgets = cockpitModule_properties.INITIALIZED_WIDGETS;
+				 	function getPage(sheet){
+				 		var heightToUse;
+				 		var exportSheetBar = false;
+				 		var element = document.getElementById('kn-cockpit');
+				 		var gridsterElement = document.querySelector('#gridsterSheet-'+sheet.index+' #gridsterContainer');
+				 		
+				 		if(element.scrollHeight < gridsterElement.scrollHeight){
+				 			element = gridsterElement;
+				 			heightToUse = gridsterElement.scrollHeight + 32;
+				 			exportSheetBar = true;
+				 		}
+				 		else heightToUse = element.scrollHeight;
+			 			
+			 			if(sheet.index != 0) doc.addPage([element.clientWidth,heightToUse],heightToUse>element.clientWidth? 'p':'l');
+			 			$timeout(function(){
+			 				html2canvas(element,{
+					 			allowTaint: true,
+					 			useCORS: true,
+					 			width: element.clientWidth,
+					 			height: element.scrollHeight,
+					 			scale : 1.5
+					 		}).then(function(canvas) {
+					 			doc.addImage(canvas, 'PNG', 0, 0, element.clientWidth/2.835, element.scrollHeight/2.835);
+					 			if(exportSheetBar){
+					 				html2canvas(document.querySelector('#sheetTabs md-tabs-wrapper'),{width: element.clientWidth,height: 32}).then(function(sheetCanvas){
+					 					doc.addImage(sheetCanvas, 'PNG', 0, element.scrollHeight/2.835, element.clientWidth/2.835, 11.287);
+					 					closeOrContinue(sheet);
+					 				})
+					 			}else{
+					 				closeOrContinue(sheet);
+					 			}
+					 		});
+			 			},300);
+
+				 	}
+				 	
+					 	if($scope.sheetsWidgets.length == $scope.cockpitModule_widgetServices.getAllWidgets().length){
+					 		$timeout(function(){
+					 			getPage(sheet);
+					 		},1000)    
+					 	}else{
+					 		$scope.sheetWatcher = $scope.$watchCollection('sheetsWidgets',function(newValue,oldValue){
+					 			var tempIds = [];
+					 			for(var w in sheet.widgets){
+					 				if(newValue.indexOf(sheet.widgets[w].id) != -1) tempIds.push(sheet.widgets[w].id);
+					 			}
+					 			if(tempIds.length == sheet.widgets.length){
+					 				$timeout(function(){
+					 					getPage(sheet);
+					 					$scope.sheetWatcher();    
+					 				},3000)        
+					 			}
+					 		})    
+					 	}
+			 		}
+			
+					for(var s in cockpitModule_template.sheets){
+						if(cockpitModule_template.sheets[s].index == 0) {
+							if(cockpitModule_properties.CURRENT_SHEET != 0) document.querySelector(".sheetPageButton-0").parentNode.click();
+							var tempElement = document.getElementById('kn-cockpit');
+					 		var gridsterElement = document.querySelector('#gridsterSheet-0 #gridsterContainer');
+					 		var sheetBarHeight = cockpitModule_template.sheets.length == 1 ? 0 : 32;
+					 		if(tempElement.scrollHeight < gridsterElement.scrollHeight) var heightToUse = gridsterElement.scrollHeight + sheetBarHeight;
+							var doc = new jsPDF({
+								orientation: (heightToUse || tempElement.scrollHeight) > tempElement.clientWidth ? 'p' : 'l',
+								unit: 'mm',
+								format: [tempElement.clientWidth, heightToUse || tempElement.scrollHeight]
+							});
+							
+							getScreenshot(cockpitModule_template.sheets[s]);
+							break;
+						}
+					}
+		})
+	}
+
+
 	
 	$scope.captureScreenShot = function(ev){
 		
@@ -263,8 +391,11 @@ function cockpitToolbarControllerFunction($scope,cockpitModule_datasetServices,c
 		}
 		
 		$scope.loadingScreenshot = true;
-		var element = document.querySelector('#gridsterSheet-'+cockpitModule_properties.CURRENT_SHEET+' #gridsterContainer');
+		//var element = document.querySelector('#gridsterSheet-'+cockpitModule_properties.CURRENT_SHEET+' #gridsterContainer');
+		var element = document.getElementById('kn-cockpit');
 		html2canvas(element,{
+			allowTaint: true,
+ 			useCORS: true,
 			width: element.clientWidth,
 		    height: element.clientHeight
 		    }
@@ -283,7 +414,6 @@ function cockpitSelectionControllerFunction($scope,cockpitModule_template,cockpi
 	$scope.selection = [];
 	$scope.translate = sbiModule_translate;
 	$scope.tmpSelection = [];
-
 
 	angular.copy(cockpitModule_template.configuration.aggregations,$scope.tmpSelection);
 	$scope.tmpFilters = {};
@@ -329,7 +459,6 @@ function cockpitSelectionControllerFunction($scope,cockpitModule_template,cockpi
 		}
 	}
 
-
 	for(var ds in $scope.tmpFilters){
 		var currentDs = cockpitModule_datasetServices.getDatasetByLabel(ds).metadata.fieldsMeta;
 		for(var col in $scope.tmpFilters[ds]){
@@ -352,42 +481,40 @@ function cockpitSelectionControllerFunction($scope,cockpitModule_template,cockpi
 			}
 		}
 	}
+	
+	$scope.selectionsGrid = {
+		angularCompileRows: true,
+		domLayout :'autoHeight',
+        enableColResize: false,
+        enableFilter: false,
+        enableSorting: false,
+        pagination: false,
+        onGridSizeChanged: resizeColumns,
+        columnDefs : [{headerName: $scope.translate.load('sbi.cockpit.dataset'), field:'ds'},
+        	{headerName: $scope.translate.load('sbi.cockpit.dataset.columnname'), field:'columnName'},
+        	{headerName: $scope.translate.load('sbi.cockpit.core.selections.list.columnValues'), field:'value'},
+        	{headerName:"",cellRenderer: buttonRenderer,"field":"id","cellStyle":{"text-align": "right","display":"inline-flex","justify-content":"flex-end","border":"none"},width: 50,suppressSizeToFit:true, tooltip: false}],
+        defaultColDef: {
+        	suppressMovable: true,
+        	suppressSorting:true,
+        	suppressFilter:true,
+        	tooltip: function (params) {
+                return params.value;
+            },
+        },
+        rowData: $scope.selection
+	};
+	
+	function resizeColumns(){
+		$scope.selectionsGrid.api.sizeColumnsToFit();
+	}
+	
+	function buttonRenderer(params){
+		return 	'<md-button class="md-icon-button" ng-click="deleteSelection(\''+params.rowIndex+'\')"><md-icon md-font-icon="fa fa-trash"></md-icon></md-button>';
+	}
 
-	$scope.columnTableSelection =[
-	                              {
-	                            	  label:"Dataset",
-	                            	  name:"ds",
-
-	                            	  hideTooltip:true
-	                              },
-	                              {
-	                            	  label:"Column Name",
-	                            	  name:"columnName",
-
-	                            	  hideTooltip:true
-	                              },
-	                              ,
-	                              {
-	                            	  label:"Values",
-	                            	  name:"value",
-
-	                            	  hideTooltip:true
-	                              }
-	                              ];
-
-
-	$scope.actionsOfSelectionColumns = [
-
-	                                    {
-	                                    	icon:'fa fa-trash' ,
-	                                    	action : function(item,event) {
-	                                    		$scope.deleteSelection(item);
-
-	                                    	}
-	                                    }
-	                                    ];
-
-	$scope.deleteSelection=function(item){
+	$scope.deleteSelection=function(rowIndex){
+		var item = $scope.selection[rowIndex];
 		if(item.aggregated){
 			var key = item.ds + "." + item.columnName;
 
@@ -408,12 +535,13 @@ function cockpitSelectionControllerFunction($scope,cockpitModule_template,cockpi
 			var index=$scope.selection.indexOf(item);
 			$scope.selection.splice(index,1);
 		}
+		$scope.selectionsGrid.api.setRowData($scope.selection)
 
 	}
 
 	$scope.clearAllSelection = function(){
 		while($scope.selection.length!=0){
-			$scope.deleteSelection($scope.selection[0]);
+			$scope.deleteSelection(0);
 		}
 	}
 
@@ -423,7 +551,7 @@ function cockpitSelectionControllerFunction($scope,cockpitModule_template,cockpi
 
 	$scope.saveConfiguration = function(){
 	    cockpitModule_widgetSelection.updateSelections($scope.tmpSelection, $scope.tmpFilters);
-		$mdDialog.cancel();
+	    $mdDialog.cancel();
 	}
 
 }

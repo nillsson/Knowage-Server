@@ -45,10 +45,15 @@ public class DataSetTransformer {
 
 	public void print(Object object) {
 
-		// System.out.println("-----------------------");
-		// System.out.println(object);
-		// System.out.println(object.getClass().toString());
-		// System.out.println("-----------------------");
+		/*
+		 * System.out.println("-----------------------"); System.out.println(object); System.out.println(object.getClass().toString());
+		 * System.out.println("-----------------------");
+		 */
+
+		logger.debug("-----------------------");
+		logger.debug(object);
+		logger.debug(object.getClass().toString());
+		logger.debug("-----------------------");
 
 	}
 
@@ -739,7 +744,10 @@ public class DataSetTransformer {
 		ArrayList<Object> categories = new ArrayList<>();
 		LinkedHashMap<String, ArrayList<JSONObject>> map = new LinkedHashMap<String, ArrayList<JSONObject>>();
 
-		String columnForGroupingSerie = dataColumnsMapper.get(groupedSerie).toLowerCase();
+		String columnForGroupingSerie = "";
+		if (!groupSeriesBool) {
+			columnForGroupingSerie = dataColumnsMapper.get(groupedSerie).toLowerCase();
+		}
 		if (!categorieColumns.get("orderColumn").equals("") && !categorieColumns.get("orderColumn").equals(categorieColumns.get("column"))
 				&& !categorieColumns.get("groupby").contains(categorieColumns.get("orderColumn"))) {
 			dataColumnsMapper.remove(categorieColumns.get("orderColumn").toLowerCase());
@@ -771,7 +779,9 @@ public class DataSetTransformer {
 			}
 
 		}
-
+		logger.debug("primCat: " + primCat);
+		logger.debug("secCat: " + secCat);
+		logger.debug("seria: " + seria);
 		for (Object singleObject : dataRows) {
 			categories.add(((Map) singleObject).get(primCat));
 		}
@@ -824,6 +834,7 @@ public class DataSetTransformer {
 
 		}
 
+		logger.debug("map: " + map);
 		return map;
 
 	}

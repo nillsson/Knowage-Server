@@ -19,7 +19,6 @@ package it.eng.knowage.engine.cockpit.api.export.excel;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -39,6 +38,7 @@ import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.WorkbookUtil;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -50,7 +50,6 @@ import it.eng.spagobi.analiticalmodel.document.bo.ObjTemplate;
 import it.eng.spagobi.commons.constants.SpagoBIConstants;
 import it.eng.spagobi.commons.dao.DAOFactory;
 import it.eng.spagobi.tools.dataset.bo.IDataSet;
-import it.eng.spagobi.tools.dataset.common.metadata.IMetaData;
 import it.eng.spagobi.tools.dataset.utils.ParamDefaultValue;
 import it.eng.spagobi.utilities.assertion.Assert;
 import it.eng.spagobi.utilities.exceptions.SpagoBIRuntimeException;
@@ -117,15 +116,6 @@ public class ExcelExporter {
 
 	}
 
-	private boolean setExportWidget(Map<String, String[]> parameterMap) {
-		boolean exportWidgetOnly = false;
-		if (parameterMap.containsKey("exportWidget")) {
-			String parameter = parameterMap.get("exportWidget")[0];
-			exportWidgetOnly = Boolean.valueOf(parameter);
-		}
-		return exportWidgetOnly;
-	}
-
 	private Locale getLocale(JSONObject body) {
 		try {
 			String language = body.getString(SpagoBIConstants.SBI_LANGUAGE);
@@ -177,16 +167,6 @@ public class ExcelExporter {
 	}
 
 	public byte[] getBinaryData(Integer documentId, String documentLabel, String templateString) {
-		Workbook wb;
-
-		if ("xlsx".equalsIgnoreCase(outputType)) {
-			wb = new XSSFWorkbook();
-		} else if ("xls".equalsIgnoreCase(outputType)) {
-			wb = new HSSFWorkbook();
-		} else {
-			throw new SpagoBIRuntimeException("Unsupported output type [" + outputType + "]");
-		}
-
 		if (templateString == null) {
 			ObjTemplate template;
 			try {
@@ -200,6 +180,16 @@ public class ExcelExporter {
 			}
 		}
 
+		Workbook wb;
+
+		if ("xlsx".equalsIgnoreCase(outputType)) {
+			wb = new XSSFWorkbook();
+		} else if ("xls".equalsIgnoreCase(outputType)) {
+			wb = new HSSFWorkbook();
+		} else {
+			throw new SpagoBIRuntimeException("Unsupported output type [" + outputType + "]");
+		}
+
 		if (exportWidget) {
 			try {
 				String widgetId = String.valueOf(body.get("widget"));
@@ -208,9 +198,10 @@ public class ExcelExporter {
 				logger.error("Cannot find widget in body request");
 			}
 		} else {
-			ExcelSheet[] excelSheets = getExcelSheets(templateString);
-			if (excelSheets != null) {
-				importCsvData(excelSheets, wb);
+			// TODO: Implement logic for DataReader, now everything stays in memory - bad when widget have large number of Data
+			List<JSONObject> excelSheets = getExcelSheetsList(templateString);
+			if (!excelSheets.isEmpty()) {
+				exportWidgetsToExcel(excelSheets, wb);
 			}
 		}
 
@@ -232,9 +223,17 @@ public class ExcelExporter {
 			JSONObject widget = getWidgetById(template, widgetId);
 			if (widget != null) {
 				String widgetName = null;
-				JSONObject content = widget.optJSONObject("content");
-				if (content != null) {
-					widgetName = content.getString("name");
+				JSONObject style = widget.optJSONObject("style");
+				if (style != null) {
+					JSONObject title = style.optJSONObject("title");
+					if (title != null) {
+						widgetName = title.optString("label");
+					} else {
+						JSONObject content = widget.optJSONObject("content");
+						if (content != null) {
+							widgetName = content.getString("name");
+						}
+					}
 				}
 
 				JSONObject dataStore = getDataStoreForWidget(template, widget);
@@ -301,14 +300,24 @@ public class ExcelExporter {
 			JSONArray rows = dataStore.getJSONArray("rows");
 
 			Sheet sheet;
-			if (widgetName != null && !widgetName.isEmpty()) {
+			Row header = null;
+			if (exportWidget) {
+				widgetName = WorkbookUtil.createSafeSheetName(widgetName);
 				sheet = wb.createSheet(widgetName);
+
+				// Create HEADER - Column Names
+				header = sheet.createRow((short) 0); // first row
 			} else {
-				sheet = wb.createSheet("Data");
+				String sheetName = dataStore.getString("sheetName");
+				sheetName = WorkbookUtil.createSafeSheetName(sheetName);
+				sheet = wb.createSheet(sheetName);
+				// First row for Widget name in case exporting whole Cockpit document
+				Row firstRow = sheet.createRow((short) 0);
+				Cell firstCell = firstRow.createCell(0);
+				firstCell.setCellValue(widgetName);
+				header = sheet.createRow((short) 1);
 			}
 
-			// Create HEADER - Column Names
-			Row header = sheet.createRow((short) 0); // first row
 			for (int i = 0; i < columns.length(); i++) {
 				JSONObject column = columns.getJSONObject(i);
 				String columnName = column.getString("header");
@@ -381,106 +390,32 @@ public class ExcelExporter {
 		return columns;
 	}
 
-	/**
-	 * Global export. Table, Chart and Crosstable widgets
-	 *
-	 * @param templateString
-	 * @return
-	 */
-	private ExcelSheet[] getExcelSheets(String templateString) {
-		List<ExcelSheet> sheets = new ArrayList<>(0);
+	private List<JSONObject> getExcelSheetsList(String templateString) {
+		List<JSONObject> sheets = new ArrayList<>(0);
 		try {
 			JSONObject template = new JSONObject(templateString);
-			sheets.addAll(getCsvsFromDatasets(template));
-			sheets.addAll(getCsvsFromWidgets(template));
-		} catch (JSONException | EMFUserError | UnsupportedEncodingException e) {
+			sheets.addAll(getDatastoresByWidget(template));
+		} catch (Exception e) {
 			logger.error("Unable to load template", e);
 		}
-
-		return sheets.toArray(new ExcelSheet[0]);
+		return sheets;
 	}
 
-	private List<ExcelSheet> getCsvsFromDatasets(JSONObject template) throws JSONException, EMFUserError, UnsupportedEncodingException {
+	private List<JSONObject> getDatastoresByWidget(JSONObject template) throws JSONException, EMFUserError {
 		logger.debug("IN");
-
-		JSONObject configuration = template.getJSONObject("configuration");
-		JSONArray datasetsObj = configuration.getJSONArray("datasets");
-
-		List<ExcelSheet> excelSheets = new ArrayList<>(datasetsObj.length());
-		for (int i = 0; i < datasetsObj.length(); i++) {
-			JSONObject datasetObj = datasetsObj.getJSONObject(i);
-			int datasetId = datasetObj.getInt("dsId");
-			IDataSet dataset = DAOFactory.getDataSetDAO().loadDataSetById(datasetId);
-			String datasetLabel = dataset.getLabel();
-
-			JSONObject body = new JSONObject();
-
-			JSONObject parameters = datasetObj.getJSONObject("parameters");
-			logger.debug("parameters = " + parameters);
-			body.put("parameters", getReplacedParameters(parameters, datasetId));
-
-			JSONObject aggregations = getAggregationsFromDataset(dataset);
-			logger.debug("aggregations = " + aggregations);
-			body.put("aggregations", aggregations);
-
-			Map<String, Object> map = new java.util.HashMap<String, Object>();
-
-			if (getRealtimeFromTableWidget(datasetId, configuration)) {
-				logger.debug("nearRealtime = true");
-				map.put("nearRealtime", true);
-			}
-
-			JSONObject datastoreObj = getDatastore(datasetLabel, map, body.toString());
-			List<String[]> table = getTable(datastoreObj);
-			excelSheets.add(new ExcelSheet(datasetLabel, table));
-		}
-
-		logger.debug("OUT");
-		return excelSheets;
-	}
-
-	private JSONObject getAggregationsFromDataset(IDataSet dataset) throws JSONException {
-		JSONObject aggregations = new JSONObject();
-
-		JSONArray categories = new JSONArray();
-		aggregations.put("categories", categories);
-
-		IMetaData metadata = dataset.getMetadata();
-		for (int i = 0; i < metadata.getFieldCount(); i++) {
-			JSONObject category = new JSONObject();
-			String alias = metadata.getFieldAlias(i);
-			category.put("id", alias);
-			category.put("alias", alias);
-			category.put("columnName", metadata.getFieldName(i));
-			category.put("orderType", "");
-
-			categories.put(category);
-		}
-
-		JSONArray measures = new JSONArray();
-		aggregations.put("measures", measures);
-
-		aggregations.put("dataset", dataset.getLabel());
-
-		return aggregations;
-	}
-
-	private List<ExcelSheet> getCsvsFromWidgets(JSONObject template) throws JSONException, EMFUserError {
-		logger.debug("IN");
-
 		JSONObject configuration = template.getJSONObject("configuration");
 		JSONArray sheets = template.getJSONArray("sheets");
 
 		loadCockpitSelections(configuration);
 
-		List<ExcelSheet> excelSheets = new ArrayList<>();
+		List<JSONObject> excelSheets = new ArrayList<>();
 
 		for (int i = 0; i < sheets.length(); i++) {
 			JSONObject sheet = sheets.getJSONObject(i);
 			int sheetIndex = sheet.getInt("index");
 
 			JSONArray widgets = sheet.getJSONArray("widgets");
-			int tableWidgetCounter = 0;
+			int widgetCounter = 0;
 			for (int j = 0; j < widgets.length(); j++) {
 				JSONObject widget = widgets.getJSONObject(j);
 				String widgetType = widget.getString("type");
@@ -520,8 +455,8 @@ public class ExcelExporter {
 					Map<String, Object> map = new java.util.HashMap<String, Object>();
 
 					if (getRealtimeFromTableWidget(datasetId, configuration)) {
-						logger.debug("realtime = true");
-						map.put("realtime", true);
+						logger.debug("nearRealtime = true");
+						map.put("nearRealtime", true);
 					}
 
 					int limit = getLimitFromTableWidget(widget);
@@ -531,15 +466,33 @@ public class ExcelExporter {
 					}
 
 					JSONObject datastoreObj = getDatastore(datasetLabel, map, body.toString());
-					List<String[]> table = getTable(datastoreObj, widget);
-					String sheetName = getI18NMessage("Widget") + " " + (sheetIndex + 1) + "." + (++tableWidgetCounter);
-					excelSheets.add(new ExcelSheet(sheetName, table));
+					String sheetName = getI18NMessage("Widget") + " " + (sheetIndex + 1) + "." + (++widgetCounter);
+					datastoreObj.put("sheetName", sheetName);
+					JSONObject content = widget.optJSONObject("content");
+					String widgetName = null;
+					if (content != null) {
+						widgetName = content.getString("name");
+					}
+					datastoreObj.put("widgetName", widgetName);
+					excelSheets.add(datastoreObj);
 				}
 			}
 		}
 
 		logger.debug("OUT");
 		return excelSheets;
+	}
+
+	private void exportWidgetsToExcel(List<JSONObject> excelSheets, Workbook wb) {
+		Iterator<JSONObject> it = excelSheets.iterator();
+		while (it.hasNext()) {
+			JSONObject widgetDatastore = it.next();
+			String widgetName = widgetDatastore.optString("widgetName");
+			if (widgetName == null || widgetName.isEmpty()) {
+				widgetName = "Widget";
+			}
+			createExcelFile(widgetDatastore, wb, widgetName);
+		}
 	}
 
 	private void loadCockpitSelections(JSONObject configuration) throws JSONException {
@@ -642,94 +595,6 @@ public class ExcelExporter {
 		}
 	}
 
-	private List<String[]> getTable(JSONObject datastore) throws JSONException {
-		List<String[]> table = new ArrayList<>();
-
-		JSONObject metaData = datastore.getJSONObject("metaData");
-		JSONArray fields = metaData.getJSONArray("fields");
-		String[] columnMap = new String[fields.length() - 1];
-		String[] headerRow = new String[fields.length() - 1];
-		for (int i = 1; i < fields.length(); i++) {
-			JSONObject field = fields.getJSONObject(i);
-			String name = field.getString("name");
-			String header = field.getString("header");
-			columnMap[i - 1] = name;
-			headerRow[i - 1] = header;
-		}
-		table.add(headerRow);
-
-		JSONArray rows = datastore.getJSONArray("rows");
-		for (int i = 0; i < rows.length(); i++) {
-			String[] tableRow = new String[columnMap.length];
-			JSONObject row = rows.getJSONObject(i);
-			for (int j = 0; j < columnMap.length; j++) {
-				String column = columnMap[j];
-				String value = row.optString(column);
-				if (value != null) {
-					tableRow[j] = value;
-				}
-			}
-			table.add(tableRow);
-		}
-
-		return table;
-	}
-
-	private List<String[]> getTable(JSONObject datastore, JSONObject widget) throws JSONException {
-		List<String[]> table = new ArrayList<>();
-
-		JSONObject content = widget.getJSONObject("content");
-		String widgetName = content.getString("name");
-		String[] titleRow = { widgetName };
-		table.add(titleRow);
-
-		JSONArray columns = content.getJSONArray("columnSelectedOfDataset");
-		int columnCount = columns.length();
-		List<String> headers = new ArrayList<String>(columnCount);
-
-		String[] headerRow = new String[columnCount];
-		for (int i = 0; i < columnCount; i++) {
-			JSONObject column = columns.getJSONObject(i);
-			String aliasToShow = column.optString("aliasToShow");
-			if (aliasToShow != null && aliasToShow.isEmpty()) {
-				aliasToShow = column.getString("alias");
-			}
-			headers.add(aliasToShow);
-			aliasToShow = getI18NMessage(aliasToShow);
-			headerRow[i] = aliasToShow;
-		}
-		table.add(headerRow);
-
-		String[] columnMap = new String[columnCount];
-		JSONObject metaData = datastore.getJSONObject("metaData");
-		JSONArray fields = metaData.getJSONArray("fields");
-		for (int i = 1; i < fields.length(); i++) {
-			JSONObject field = fields.getJSONObject(i);
-			String name = field.getString("name");
-			String header = field.getString("header");
-			int index = headers.indexOf(header);
-			if (index > -1) {
-				columnMap[index] = name;
-			}
-		}
-
-		JSONArray rows = datastore.getJSONArray("rows");
-		for (int i = 0; i < rows.length(); i++) {
-			JSONObject row = rows.getJSONObject(i);
-			String[] tableRow = new String[columnMap.length];
-			for (int j = 0; j < columnMap.length; j++) {
-				String column = columnMap[j];
-				String value = row.optString(column);
-				if (value != null) {
-					tableRow[j] = value;
-				}
-			}
-			table.add(tableRow);
-		}
-
-		return table;
-	}
-
 	private JSONObject getAggregationsFromWidget(JSONObject widget, JSONObject configuration) throws JSONException {
 		JSONObject aggregations = new JSONObject();
 
@@ -765,8 +630,11 @@ public class ExcelExporter {
 					JSONObject categoryOrMeasure = new JSONObject();
 					categoryOrMeasure.put("id", column.getString("alias"));
 					categoryOrMeasure.put("alias", aliasToShow);
-					categoryOrMeasure.put("columnName", column.getString("name"));
-					if (isSortingDefined && sortingColumn.equals(column.getString("name"))) {
+
+					String formula = column.optString("formula");
+					String name = formula.isEmpty() ? column.optString("name") : formula;
+					categoryOrMeasure.put("columnName", name);
+					if (isSortingDefined && column.has("name") && sortingColumn.equals(name)) {
 						categoryOrMeasure.put("orderType", sortingOrder);
 						isSortingUsed = true;
 					} else {
@@ -805,9 +673,48 @@ public class ExcelExporter {
 	private JSONObject getParametersFromWidget(JSONObject widget, JSONObject configuration) throws JSONException {
 		JSONObject dataset = getDatasetFromWidget(widget, configuration);
 		JSONObject parameters = dataset.getJSONObject("parameters");
-
+		String datasetName = dataset.getString("name");
 		Integer datasetId = dataset.getInt("dsId");
-		return getReplacedParameters(parameters, datasetId);
+
+		if (actualSelectionMap.containsKey(datasetName)) {
+			JSONObject actualSelections = actualSelectionMap.get(datasetName);
+			Iterator<String> actualSelectionKeys = actualSelections.keys();
+			JSONObject newParameters = new JSONObject();
+			while (actualSelectionKeys.hasNext()) {
+				String key = actualSelectionKeys.next();
+				if (key.contains("$")) {
+					Object values = actualSelections.get(key);
+					newParameters.put(key, values);
+				}
+			}
+			JSONObject params = getReplacedAssociativeParameters(parameters, newParameters);
+			return getReplacedParameters(params, datasetId);
+		} else
+			return getReplacedParameters(parameters, datasetId);
+	}
+
+	private JSONObject getReplacedAssociativeParameters(JSONObject oldParameters, JSONObject newParameters) throws JSONException {
+		JSONObject parameters = new JSONObject();
+		Iterator<String> newParameterKeys = newParameters.keys();
+		while (newParameterKeys.hasNext()) {
+			String parameter = newParameterKeys.next();
+			String regex = "\\$P\\{(.*)\\}";
+			Matcher parameterMatcher = Pattern.compile(regex).matcher(parameter);
+			if (parameterMatcher.matches()) {
+				String parameterName = parameterMatcher.group(1);
+				Object exists = oldParameters.get(parameterName);
+				if (exists != null) {
+					JSONArray value = (JSONArray) newParameters.get(parameter);
+					String regex2 = "\\(\\'(.*)\\'\\)";
+					Matcher parameterMatcher2 = Pattern.compile(regex2).matcher(value.get(0).toString());
+					if (parameterMatcher2.matches()) {
+						String realValue = parameterMatcher2.group(1);
+						parameters.put(parameterName, realValue);
+					}
+				}
+			}
+		}
+		return parameters;
 	}
 
 	private JSONObject getReplacedParameters(JSONObject parameters, Integer datasetId) throws JSONException {
@@ -886,7 +793,9 @@ public class ExcelExporter {
 								measure.put("id", column.getString("alias"));
 								measure.put("alias", column.getString("aliasToShow"));
 								measure.put("funct", column.getString("funcSummary"));
-								measure.put("columnName", column.getString("name"));
+								String formula = column.optString("formula");
+								String name = formula.isEmpty() ? column.optString("name") : formula;
+								measure.put("columnName", name);
 								measures.put(measure);
 							}
 						}
@@ -917,18 +826,6 @@ public class ExcelExporter {
 			JSONObject dataset = (JSONObject) datasets.get(i);
 			int id = dataset.getInt("dsId");
 			if (id == dsId) {
-				return dataset;
-			}
-		}
-		return null;
-	}
-
-	private JSONObject getDataset(String dsLabel, JSONObject configuration) throws JSONException {
-		JSONArray datasets = configuration.getJSONArray("datasets");
-		for (int i = 0; i < datasets.length(); i++) {
-			JSONObject dataset = (JSONObject) datasets.get(i);
-			String label = dataset.getString("dsLabel");
-			if (label.equals(dsLabel)) {
 				return dataset;
 			}
 		}
@@ -1043,31 +940,15 @@ public class ExcelExporter {
 			Iterator<String> actualSelectionKeys = actualSelections.keys();
 			while (actualSelectionKeys.hasNext()) {
 				String key = actualSelectionKeys.next();
-				Object values = actualSelections.get(key);
-				datasetFilters.put(key, values);
+				if (!key.contains("$")) {
+					Object values = actualSelections.get(key);
+					datasetFilters.put(key, values);
+				}
 			}
 		}
 
 		selections.put(datasetName, datasetFilters);
 		return selections;
-	}
-
-	private void importCsvData(ExcelSheet[] excelSheets, Workbook wb) {
-		for (int i = 0; i < excelSheets.length; i++) {
-			ExcelSheet excelSheet = excelSheets[i];
-
-			Sheet sheet = wb.createSheet(excelSheet.getLabel());
-
-			List<String[]> table = excelSheet.getTable();
-			for (int rowIndex = 0; rowIndex < table.size(); rowIndex++) {
-				Row row = sheet.createRow(rowIndex);
-				String[] columns = table.get(rowIndex);
-				for (int columnIndex = 0; columnIndex < columns.length; columnIndex++) {
-					Cell cell = row.createCell(columnIndex);
-					cell.setCellValue(columns[columnIndex]);
-				}
-			}
-		}
 	}
 
 }

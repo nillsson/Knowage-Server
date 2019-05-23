@@ -1,7 +1,7 @@
 
 <div class="filter-panel" layout="row" flex>
 	<div class="new-filter-card" 
-			ng-repeat="filter in filterCardList|limitTo:numVisibleFilters" 
+			ng-repeat="filter in filterCardList|limitTo:numVisibleFilters:index" 
 			ng-drag="true" ng-drag-data="filter" 
 			ng-drag-success="dragSuccess('filter',$index)"
 			id="filter-{{filter.name}}"
@@ -17,9 +17,9 @@
 		</div>
 	
 	 	<div layout="row" class="bottom">
-			<div class="name-area"  title="{{filterSelected[$index].visible ? filterSelected[$index].caption : 'Filter not selected'}}">
+			<div class="name-area"  title="{{(filterSelected |limitTo:numVisibleFilters:index)[$index].visible ? (filterSelected |limitTo:numVisibleFilters:index)[$index].caption : 'Filter not selected'}}">
 				<span class="no-wrap">
-					{{filterSelected[$index].visible ? cutName(filterSelected[$index].caption, -1, false) : '...'}}
+					{{(filterSelected |limitTo:numVisibleFilters:index)[$index].visible ? cutName((filterSelected |limitTo:numVisibleFilters:index)[$index].caption, -1, false) : '...'}}
 				</span>
 			</div>
 			<div class="button-area">

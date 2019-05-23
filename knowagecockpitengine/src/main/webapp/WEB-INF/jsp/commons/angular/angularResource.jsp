@@ -38,12 +38,19 @@
 <%@page import="it.eng.spagobi.behaviouralmodel.analyticaldriver.bo.Parameter"%>
 <%@page import="it.eng.spagobi.engine.chart.util.ChartEngineUtil"%>
 <%@page import="it.eng.spagobi.commons.bo.AccessibilityPreferences" %>
+<%@page import="it.eng.knowage.commons.utilities.urls.UrlBuilder"%>
 
 <%-- ---------------------------------------------------------------------- --%>
 <%-- JAVA CODE 																--%>
 <%-- ---------------------------------------------------------------------- --%>
 
 <%
+	String spagoBiContext = GeneralUtilities.getSpagoBiContext();							//  /knowage
+	String cockpitEngineContext = request.getContextPath(); 								//  /cockpitengine
+	UrlBuilder urlBuilder = new UrlBuilder(spagoBiContext, cockpitEngineContext);
+	String dynamicResourcesBasePath = urlBuilder.getDynamicResorucesBasePath();  			//  /knowage/js/src
+	String dynamicResourcesEnginePath = urlBuilder.getDynamicResourcesEnginePath();  		//  /cockpitengine/js/src
+	
 	SourceBean sb = ((SourceBean) EnginConf.getInstance().getConfig().getAttribute("ChartEngineContextName"));
 	String chartEngineContextName = sb.getCharacters();
 
@@ -59,6 +66,7 @@
 	String initialSelections = (request.getParameter("COCKPIT_SELECTIONS")==null) ? "{}" : request.getParameter("COCKPIT_SELECTIONS");
 	Boolean exportMode = (request.getParameter("export")==null)?false: Boolean.parseBoolean(request.getParameter("export"));
 	String 	executionRole = (String)env.get(EngineConstants.ENV_EXECUTION_ROLE);
+	String folderId = (request.getParameter(SpagoBIConstants.FUNCTIONALITY_ID)==null)?"":request.getParameter(SpagoBIConstants.FUNCTIONALITY_ID);
 
 	String userUniqueIdentifier="";
 	String userId="";

@@ -269,7 +269,7 @@ public class CrossTab {
 			columnsHeaderList.add(crosstabDefinition.getColumns().get(i).getAlias());
 			columnsHeaderIdList.add(crosstabDefinition.getColumns().get(i).getEntityId());
 			if (crosstabDefinition.getColumns().get(i).getSortingId() != null && !crosstabDefinition.getColumns().get(i).getSortingId().equals("")) {
-				orderingHeaderList.add(crosstabDefinition.getColumns().get(i).getSortingId()  + "|" + crosstabDefinition.getColumns().get(i).getEntityId());
+				orderingHeaderList.add(crosstabDefinition.getColumns().get(i).getSortingId()  + "|" + crosstabDefinition.getColumns().get(i).getAlias());
 			}
 		}
 
@@ -287,11 +287,11 @@ public class CrossTab {
 			}
 			String name = dataStoreMetadataFields.getJSONObject(i).getString("name");
 			String header = dataStoreMetadataFields.getJSONObject(i).getString("header");
-			if (columnsHeaderList.contains(header)) {
+			if (columnsHeaderList.contains(header) || columnsHeaderIdList.contains(header)) {
 				columnsNameList.add(addNumberToColumnName(name, -1));
-			} else if (rowsHeaderList.contains(header)) {
+			} else if (rowsHeaderList.contains(header) || rowsHeaderIdList.contains(header)) {
 				rowsNameList.add(addNumberToColumnName(name, -1));
-			} else if (measuresHeaderList.contains(header)) {
+			} else if (measuresHeaderList.contains(header) || measuresHeaderIdList.contains(header)) {
 				measuresNameList.add(addNumberToColumnName(name, -1));
 			}
 		}
@@ -374,7 +374,7 @@ public class CrossTab {
 						Integer idx = getColumnIndex(entry.getValue().getMeasureLabel(), measuresHeaderList);
 						if (idx >= 0) {
 							String colName = measuresNameList.get(idx);
-							Double value = Double.valueOf(String.valueOf(valueRecord.get(colName)));
+							Double value = (valueRecord.get(colName).equals("")) ? 0 : Double.valueOf(String.valueOf(valueRecord.get(colName)));
 							String[] columnPathArray = columnPath.trim().split(PATH_SEPARATOR);
 							String[] entryParents = measuresSortKeysMap.get(entry.getKey()).getParentValue().split(PATH_SEPARATOR);
 							// add value to order only if parents are correct (useful for deep levels)

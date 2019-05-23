@@ -17,7 +17,7 @@
 <%@page import="java.util.Iterator"%>
 <%@page import="com.fasterxml.jackson.databind.ObjectMapper"%>
 <%@page import="org.json.JSONObject"%>
-
+<%@page import="it.eng.knowage.commons.utilities.urls.UrlBuilder"%>
 
 <%
 /*
@@ -55,6 +55,13 @@ String associations = "";
 String widgetId = "";
 String metaData = "";
 
+// Dynamic Url Builder - Caching Management
+String spagoBiContext = GeneralUtilities.getSpagoBiContext();							//  /knowage
+String kpiEngineContext = request.getContextPath(); 									//  /kpiengine
+UrlBuilder urlBuilder = new UrlBuilder(spagoBiContext, kpiEngineContext);
+String dynamicResourcesBasePath = urlBuilder.getDynamicResorucesBasePath();  			//  /knowage/js/src
+String dynamicResourcesEnginePath = urlBuilder.getDynamicResourcesEnginePath();  		//  /kpiengine/js/src
+	
 engineInstance = (KpiEngineInstance)request.getSession().getAttribute(EngineConstants.ENGINE_INSTANCE);
 env = engineInstance.getEnv();
 

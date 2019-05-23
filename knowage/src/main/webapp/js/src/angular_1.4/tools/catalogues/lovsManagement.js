@@ -1,8 +1,23 @@
-/**
- * JS file for managing LOVs management catalog panel.
- * 
- * @author: danristo (danilo.ristovski@mht.net)
- */
+/*
+Knowage, Open Source Business Intelligence suite
+Copyright (C) 2016 Engineering Ingegneria Informatica S.p.A.
+
+Knowage is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+Knowage is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+(function() {
+	
+agGrid.initialiseAgGridWithAngular1(angular);
 
 var app = angular.module
 (
@@ -17,7 +32,8 @@ var app = angular.module
 	 	'ui.codemirror',
 	 	'ui.tree',
 	 	'ab-base64',
-	 	'knTable'
+	 	'knTable',
+	 	'agGrid'
 	 ]
 );
 
@@ -43,11 +59,12 @@ app.controller
 	 	"base64",
 	 	"sbiModule_device",
 	 	"$filter",
+	 	"$mdPanel",
 	 	lovsManagementFunction
 	 ]
 );
 
-function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $scope, $mdDialog, $mdToast,sbiModule_messaging,sbiModule_config,$timeout,sbiModule_user,base64,sbiModule_device,$filter)
+function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $scope, $mdDialog, $mdToast,sbiModule_messaging,sbiModule_config,$timeout,sbiModule_user,base64,sbiModule_device,$filter, $mdPanel)
 {
 	/**
 	 * =====================
@@ -86,7 +103,10 @@ function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $sc
 		name : ""	
 	};
 	$scope.selectedDataset = {
-		id : ""	
+		id : "",
+		label: "",
+		name: "",
+		description: ""
 	};
 	$scope.lovItemEnum ={
 		"SCRIPT" : "SCRIPT",
@@ -193,7 +213,73 @@ function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $sc
 		   "value" : "treeinner"
 	   }
 	                       
-	                       ]
+    ]
+	
+	var addDataset = function() {
+		var config = {
+				attachTo: angular.element(document.body),
+				templateUrl: sbiModule_config.dynamicResourcesBasePath +'/angular_1.4/tools/catalogues/templates/lovAddDataset.html',
+				position: $mdPanel.newPanelPosition().absolute().center(),
+				fullscreen: true,
+				locals: {listOfDatasets: $scope.listOfDatasets, saveDatasetFn: $scope.saveDataset},
+				controller: addDatasetController,
+				clickOutsideToClose: false,
+				escapeToClose: true,
+		};
+		
+		$mdPanel.open(config);
+	}
+	
+	function addDatasetController($scope, mdPanelRef, sbiModule_translate, listOfDatasets, saveDatasetFn) {
+		$scope.translate = sbiModule_translate;
+		$scope.listOfDatasets = listOfDatasets;
+		
+		$scope.datasetSearchText = '';
+		
+		$scope.filterDataset = function() {
+			var tempDatasetList = $filter('filter')($scope.listOfDatasets, $scope.datasetSearchText);
+			$scope.datasetGrid.api.setRowData(tempDatasetList);
+		}
+		
+		$scope.gridDatasetColumns = [
+			{"headerName": sbiModule_translate.load('sbi.ds.label'),"field":"label"},
+			{"headerName": sbiModule_translate.load('sbi.ds.name'),"field":"name"},
+			{"headerName": sbiModule_translate.load('sbi.ds.description'),"field":"description"},
+		];
+		
+		$scope.datasetGrid = {
+		        enableColResize: false,
+		        enableFilter: true,
+		        enableSorting: true,
+		        pagination: true,
+		        paginationAutoPageSize: true,
+		        rowSelection: 'single',
+		        rowMultiSelectWithClick: 'single',
+		        onGridSizeChanged: resizeColumns,
+		        columnDefs: $scope.gridDatasetColumns,
+		        rowData: $scope.listOfDatasets
+		};
+		
+		function resizeColumns(){
+			$scope.datasetGrid.api.sizeColumnsToFit();
+		}
+						
+		$scope.closeDialog = function() {
+			mdPanelRef.close();
+			$scope.$destroy();
+		}
+		
+		$scope.saveDataset = function() {
+			var selectedDs = $scope.datasetGrid.api.getSelectedRows()[0];			
+			saveDatasetFn(selectedDs);
+			mdPanelRef.close();
+			$scope.$destroy();
+		}
+	}
+	
+	$scope.saveDataset = function(dataSetObject) {
+		$scope.selectedDataset = dataSetObject;
+	}
 	
 	$scope.formatedVisibleValues = [];
 	$scope.formatedInvisibleValues = [];
@@ -331,7 +417,6 @@ function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $sc
 		$scope.getInputTypes();
 		$scope.getScriptTypes();
 		$scope.getDatasources();
-		$scope.getDatasets();
     });
 	
 	$scope.setDirty=function()
@@ -460,7 +545,7 @@ function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $sc
 			preserveScope : true,
 			parent : angular.element(document.body),
 			controllerAs : 'LOVSctrl',
-			templateUrl : sbiModule_config.contextName +'/js/src/angular_1.4/tools/catalogues/templates/profileAttributes.html',
+			templateUrl : sbiModule_config.dynamicResourcesBasePath +'/angular_1.4/tools/catalogues/templates/profileAttributes.html',
 			clickOutsideToClose : false,
 			hasBackdrop : false
 		});
@@ -472,14 +557,13 @@ function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $sc
 	 */
 	$scope.openInfoFromLOV = function() {
 		if($scope.selectedLov.itypeCd != $scope.lovItemEnum.DATASET){
-			console.lo
 			$mdDialog
 			.show({
 				scope : $scope,
 				preserveScope : true,
 				parent : angular.element(document.body),
 				controllerAs : 'LOVSctrl',
-				templateUrl : sbiModule_config.contextName +'/js/src/angular_1.4/tools/catalogues/templates/Info.html',
+				templateUrl : sbiModule_config.dynamicResourcesBasePath +'/angular_1.4/tools/catalogues/templates/Info.html',
 				clickOutsideToClose : false,
 				hasBackdrop : false
 			});
@@ -756,8 +840,17 @@ function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $sc
 			$scope.selectedJavaClass.name = $scope.selectedLov.lovProvider.JAVACLASSLOV.JAVA_CLASS_NAME;
 			
 		}else if ($scope.selectedLov.lovProvider.hasOwnProperty(lovProviderEnum.DATASET)) {
-			
-			$scope.selectedDataset.id = $scope.selectedLov.lovProvider.DATASET.ID;
+			var dataSetId = $scope.selectedLov.lovProvider.DATASET.ID;
+		
+			sbiModule_restServices.promiseGet("1.0/datasets/dataset/id", dataSetId)
+			.then(function(response){
+				var dataSet = response.data[0];
+				$scope.selectedDataset.id = dataSet.id;
+				$scope.selectedDataset.label = dataSet.label;
+				$scope.selectedDataset.name = dataSet.name;
+			}, function(response){
+				sbiModule_messaging.showErrorMessage(response.data.errors[0].message, sbiModule_translate.load("sbi.generic.toastr.title.error"));
+			});
 		}
 		
 		if($scope.dirtyForm){
@@ -923,15 +1016,17 @@ function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $sc
 		 */
 		
 		$scope.getDatasets = function() {
-			sbiModule_restServices.promiseGet("1.0/datasets/datasetsforlov","")
-			.then(function(response) {
-				console.log(response);
-				$scope.listOfDatasets = response.data;
-				console.log($scope.listOfDatasets);
-			}, function(response) {
-				sbiModule_messaging.showErrorMessage(response.data.errors[0].message, sbiModule_translate.load("sbi.generic.toastr.title.error"));
-				
-			});
+			if ($scope.listOfDatasets.length == 0) {
+				sbiModule_restServices.promiseGet("1.0/datasets/datasetsforlov","")
+				.then(function(response) {				
+					$scope.listOfDatasets = response.data;
+					addDataset();
+				}, function(response) {
+					sbiModule_messaging.showErrorMessage(response.data.errors[0].message, sbiModule_translate.load("sbi.generic.toastr.title.error"));
+				});
+			} else {
+				addDataset();
+			}
 		}
 		
 		$scope.testLov = function() {
@@ -945,7 +1040,7 @@ function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $sc
 				preserveScope : true,
 				parent : angular.element(document.body),
 				controllerAs : 'LOVSctrl',
-				templateUrl : sbiModule_config.contextName +'/js/src/angular_1.4/tools/catalogues/templates/lovTest.html',
+				templateUrl : sbiModule_config.dynamicResourcesBasePath +'/angular_1.4/tools/catalogues/templates/lovTest.html',
 				clickOutsideToClose : false,
 				hasBackdrop : false
 			});
@@ -1263,7 +1358,7 @@ function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $sc
 						preserveScope : true,
 						parent : angular.element(document.body),
 						controllerAs : 'LOVSctrl',
-						templateUrl : sbiModule_config.contextName +'/js/src/angular_1.4/tools/catalogues/templates/lovParams.html',
+						templateUrl : sbiModule_config.dynamicResourcesBasePath +'/angular_1.4/tools/catalogues/templates/lovParams.html',
 						clickOutsideToClose : false,
 						hasBackdrop : false
 					});
@@ -1344,7 +1439,7 @@ function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $sc
 									preserveScope : true,
 									parent : angular.element(document.body),
 									controllerAs : 'LOVSctrl',
-									templateUrl : sbiModule_config.contextName +'/js/src/angular_1.4/tools/catalogues/templates/lovPreview.html',
+									templateUrl : sbiModule_config.dynamicResourcesBasePath +'/angular_1.4/tools/catalogues/templates/lovPreview.html',
 									clickOutsideToClose : false,
 									hasBackdrop : false
 								});
@@ -1505,3 +1600,5 @@ function lovsManagementFunction(sbiModule_translate, sbiModule_restServices, $sc
 	 		 
 	 }
 };
+
+})();

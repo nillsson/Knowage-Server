@@ -32,7 +32,6 @@ angular
 	 	return {
 	      	restrict: 'E',
 	      	replace: 'true',
-//	      	templateUrl: '/knowage/js/src/angular_1.4/tools/workspace/templates/datasetsViewWorkspace.html' ,
 	      	templateUrl: currentScriptPath + '../../../templates/datasetsViewWorkspace.html',
 	      	controller: datasetsController
 	  	};
@@ -355,45 +354,67 @@ function datasetsController($scope, sbiModule_restServices, sbiModule_translate,
 	};
 
 
-	$scope.deleteDataset=function(dataset){
+	$scope.deleteDataset=function(dataset, $event){
 
-//		console.log(dataset);
+		var label = dataset.label;
 
-		var label= dataset.label;
-
-		var confirm = $mdDialog.confirm()
-		.title(sbiModule_translate.load("sbi.workspace.delete.confirm.title"))
-		.content(sbiModule_translate.load("sbi.workspace.dataset.delete.confirm"))
-		.ariaLabel('delete Document')
-		.ok(sbiModule_translate.load("sbi.general.yes"))
-		.cancel(sbiModule_translate.load("sbi.general.No"));
-			$mdDialog.show(confirm).then(function() {
-
-			sbiModule_restServices.promiseDelete("1.0/datasets",label)
-			.then(function(response) {
-
-				// Take the toaster duration set inside the main controller of the Workspace. (danristo)
-				toastr.success(sbiModule_translate.load("sbi.workspace.dataset.delete.success"),
-						sbiModule_translate.load('sbi.workspace.dataset.success'), $scope.toasterConfig);
-
-				$scope.reloadMyDataFn();
-				$scope.selectDataset(undefined);
-				$scope.idsOfFederationDefinitionsUsediNFederatedDatasets = [];
-				$scope.getFederatedDatasets(); //suppose the deleted dataste is in a federation we need to refresh the federation in order to refresh the dataste linked to federations
-				/**
-				 * If some dataset is removed from the filtered set of datasets, clear the search input, since all datasets are refreshed.
-				 *  @author Danilo Ristovski (danristo, danilo.ristovski@mht.net)
-				 */
-				$scope.searchInput = "";
-			},function(response) {
-
-				// Take the toaster duration set inside the main controller of the Workspace. (danristo)
+		sbiModule_restServices.promiseGet("2.0/federateddataset/dataset", dataset.id)
+			.then(function(response){
+				var federationModels = response.data;
+				
+				if (federationModels.length > 0) {
+					$mdDialog.show(
+						      $mdDialog.alert()
+						        .parent(angular.element(document.body))
+						        .clickOutsideToClose(true)
+						        .title(sbiModule_translate.load("sbi.ds.deletedataset")) 
+						        .textContent(sbiModule_translate.load("sbi.federationdefinition.cant.delete.dataset")) 
+						        .ariaLabel('Delete dataset info')
+						        .ok(sbiModule_translate.load("sbi.general.close"))
+						        .targetEvent(event)
+						    ).then(function(){
+						    	// dialog closed
+						    });
+				} else {
+					var confirm = $mdDialog.confirm()
+					.title(sbiModule_translate.load("sbi.workspace.delete.confirm.title"))
+					.content(sbiModule_translate.load("sbi.workspace.dataset.delete.confirm"))
+					.ariaLabel('delete Document')
+					.ok(sbiModule_translate.load("sbi.general.yes"))
+					.cancel(sbiModule_translate.load("sbi.general.No"));
+				
+					$mdDialog.show(confirm).then(function() {
+	
+						sbiModule_restServices.promiseDelete("1.0/datasets",label)
+						.then(function(response) {
+	
+							// Take the toaster duration set inside the main controller of the Workspace. (danristo)
+							toastr.success(sbiModule_translate.load("sbi.workspace.dataset.delete.success"),
+									sbiModule_translate.load('sbi.workspace.dataset.success'), $scope.toasterConfig);
+	
+							$scope.reloadMyDataFn();
+							$scope.selectDataset(undefined);
+							
+							/**
+							 * If some dataset is removed from the filtered set of datasets, clear the search input, since all datasets are refreshed.
+							 *  @author Danilo Ristovski (danristo, danilo.ristovski@mht.net)
+							 */
+							$scope.searchInput = "";
+						},function(response) {
+	
+							// Take the toaster duration set inside the main controller of the Workspace. (danristo)
+							toastr.error(response.data.errors[0].message,
+				        			  sbiModule_translate.load('sbi.generic.error'), $scope.toasterConfig);
+	
+						});
+					});
+				}
+				
+			}, function(response){
 				toastr.error(response.data.errors[0].message,
 	        			  sbiModule_translate.load('sbi.generic.error'), $scope.toasterConfig);
-
 			});
-		});
-
+		
 	}
 
 	$scope.downloadDatasetFile = function(dataset) {
@@ -492,7 +513,7 @@ function datasetsController($scope, sbiModule_restServices, sbiModule_translate,
 			  scope:$scope,
 			  preserveScope: true,
 		      controller: DialogShareDatasetController,
-		      templateUrl: sbiModule_config.contextName+'/js/src/angular_1.4/tools/workspace/templates/shareDatasetDialogTemplate.html',
+		      templateUrl: sbiModule_config.dynamicResourcesBasePath+'/angular_1.4/tools/workspace/templates/shareDatasetDialogTemplate.html',
 		      clickOutsideToClose:false,
 		      escapeToClose :false,
 		      locals:{
@@ -784,7 +805,7 @@ function datasetsController($scope, sbiModule_restServices, sbiModule_translate,
 			  scope:$scope,
 			  preserveScope: true,
 		      controller: DatasetPreviewController,
-		      templateUrl: sbiModule_config.contextName+'/js/src/angular_1.4/tools/workspace/templates/datasetPreviewDialogTemplateWorkspace.html',
+		      templateUrl: sbiModule_config.dynamicResourcesBasePath+'/angular_1.4/tools/workspace/templates/datasetPreviewDialogTemplateWorkspace.html',
 		      clickOutsideToClose:false,
 		      escapeToClose :false,
 		      //fullscreen: true,
@@ -830,7 +851,7 @@ function datasetsController($scope, sbiModule_restServices, sbiModule_translate,
   		  scope:$scope,
   		  preserveScope: true,
   	      controller: DatasetCreateController,
-  	      templateUrl: sbiModule_config.contextName+'/js/src/angular_1.4/tools/workspace/templates/datasetCreateDialogTemplate.html',
+  	      templateUrl: sbiModule_config.dynamicResourcesBasePath+'/angular_1.4/tools/workspace/templates/datasetCreateDialogTemplate.html',
   	      clickOutsideToClose: false,
   	      escapeToClose :true,
   	      //fullscreen: true,
@@ -984,7 +1005,7 @@ function datasetsController($scope, sbiModule_restServices, sbiModule_translate,
 
     	$mdDialog.show({
     		controller: cloneQbeDatasetDialogController,
-			templateUrl: sbiModule_config.contextName + '/js/src/angular_1.4/tools/workspace/templates/cloneDatasetDialogTemplate.html',
+			templateUrl: sbiModule_config.dynamicResourcesBasePath + '/angular_1.4/tools/workspace/templates/cloneDatasetDialogTemplate.html',
 			parent: angular.element(document.body),
 			locals: {
 				clonedLabel: clonedDataset.label,
@@ -1051,7 +1072,7 @@ function datasetsController($scope, sbiModule_restServices, sbiModule_translate,
 		  scope:$scope,
 		  preserveScope: true,
 	      controller: DatasetCreateController,
-	      templateUrl: sbiModule_config.contextName+'/js/src/angular_1.4/tools/workspace/templates/datasetCreateDialogTemplate.html',
+	      templateUrl: sbiModule_config.dynamicResourcesBasePath+'/angular_1.4/tools/workspace/templates/datasetCreateDialogTemplate.html',
 	      clickOutsideToClose: false,
 	      escapeToClose :true,
 	      fullscreen: false,
@@ -1403,7 +1424,7 @@ function datasetsController($scope, sbiModule_restServices, sbiModule_translate,
   		  scope:$scope,
 			  preserveScope: true,
 		      controller: DialogCkanController,
-		      templateUrl: sbiModule_config.contextName+'/js/src/angular_1.4/tools/workspace/templates/ckanDetailTemplate.html',
+		      templateUrl: sbiModule_config.dynamicResourcesBasePath+'/angular_1.4/tools/workspace/templates/ckanDetailTemplate.html',
 		      clickOutsideToClose:false,
 		      escapeToClose :false,
 		      fullscreen: true,
@@ -1434,7 +1455,7 @@ function datasetsController($scope, sbiModule_restServices, sbiModule_translate,
 	    		  scope:$scope,
 	    		  preserveScope: true,
 	    	      controller: DatasetCreateController,
-	    	      templateUrl: sbiModule_config.contextName+'/js/src/angular_1.4/tools/workspace/templates/datasetCreateDialogTemplate.html',
+	    	      templateUrl: sbiModule_config.dynamicResourcesBasePath+'/angular_1.4/tools/workspace/templates/datasetCreateDialogTemplate.html',
 	    	      clickOutsideToClose: false,
 	    	      escapeToClose :true,
 	    	      //fullscreen: true,

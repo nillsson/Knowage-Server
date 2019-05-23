@@ -748,7 +748,7 @@
 			$mdDialog.show({
 				//scope : serviceScope,
 				preserveScope : true,
-				templateUrl : sbiModule_config.contextName + '/js/src/angular_1.4/tools/glossary/commons/templates/dialog-new-parameters-document-execution.html',
+				templateUrl : sbiModule_config.dynamicResourcesBasePath + '/angular_1.4/tools/glossary/commons/templates/dialog-new-parameters-document-execution.html',
 				controllerAs : 'vpCtrl',
 				controller : function($mdDialog) {
 					var vpctl = this;
@@ -789,8 +789,8 @@
 					};
 				},
 
-				templateUrl : sbiModule_config.contextName
-				+ '/js/src/angular_1.4/tools/documentexecution/templates/dialog-new-parameters-document-execution.html'
+				templateUrl : sbiModule_config.dynamicResourcesBasePath
+				+ '/angular_1.4/tools/documentexecution/templates/dialog-new-parameters-document-execution.html'
 			});
 		};
 
@@ -846,18 +846,27 @@
 		};
 
 		this.toggleParametersPanel = function(open) {
+			
+			function toggleNewPanel(opened){
+				 if(document.getElementById("parametersPanelSideNav-e")){
+					 if(opened==undefined) $mdSidenav('parametersPanelSideNav-e').toggle();
+					 if(opened) $mdSidenav('parametersPanelSideNav-e').open();
+					 if(opened == false) $mdSidenav('parametersPanelSideNav-e').close();
+				 }
+			 }
+
 			$timeout(function(){
 				if(open==undefined){
 					execProperties.showParametersPanel.status=!execProperties.showParametersPanel.status;
-//					$mdSidenav('parametersPanelSideNav').toggle();
+					toggleNewPanel();
 				}else if(open){
 					execProperties.showParametersPanel.status=true;
-//					$mdSidenav('parametersPanelSideNav').open();
+					toggleNewPanel(true);
 				}else if(!open){
 					execProperties.showParametersPanel.status=false;
-//					$mdSidenav('parametersPanelSideNav').close();
+					toggleNewPanel(false);
 				}
-			},0);
+			}, document.getElementById("parametersPanelSideNav-e") ? 0 : 500);
 		};
 	});
 

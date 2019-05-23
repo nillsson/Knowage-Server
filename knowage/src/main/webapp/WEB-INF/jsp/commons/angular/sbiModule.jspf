@@ -3,6 +3,8 @@
 <%@page import="it.eng.spagobi.tenant.TenantManager"%>
 <%@page import="it.eng.spagobi.commons.SingletonConfig"%>
 <%@page import="it.eng.spagobi.commons.constants.SpagoBIConstants"%>
+<%@page import="it.eng.knowage.commons.utilities.urls.UrlBuilder"%>
+
 <script>
 var sbiM=angular.module('sbiModule',["toastr","ngSanitize"]);
 
@@ -10,7 +12,10 @@ var sbiM=angular.module('sbiModule',["toastr","ngSanitize"]);
 // 	$mdThemingProvider.theme('default').primaryPalette('grey').accentPalette('blue-grey');
 // });
 <%	
-String contextNameForEngineComposition = GeneralUtilities.getSpagoBiContext().replaceAll("^/", "");
+	String contextNameForEngineComposition = GeneralUtilities.getSpagoBiContext().replaceAll("^/", "");
+	String spagoBiContext = GeneralUtilities.getSpagoBiContext();	//  /knowage
+	UrlBuilder dynamicUrlBuilder = new UrlBuilder(spagoBiContext);
+	String dynamicResourcesBasePath = dynamicUrlBuilder.getDynamicResorucesBasePath();  //  /knowage/js/src/
 %>
 sbiM.factory('sbiModule_config',function(){ 
 	return {
@@ -46,7 +51,7 @@ sbiM.factory('sbiModule_config',function(){
         isStatePersistenceEnabled: <%= SingletonConfig.getInstance().getConfigValue("SPAGOBI.SESSION_PARAMETERS_MANAGER.enabled")  %>,
         layerFileMaxSize: '<%= GeneralUtilities.getGisLayerFileMaxSize() %>',
         workspaceShowGrid: '<%= SingletonConfig.getInstance().getConfigValue("KNOWAGE.WORKSPACE_SHOW_GRID") %>',
-                
+        dynamicResourcesBasePath: '<%= dynamicResourcesBasePath %>',        
         
 		<%-- <%if(parametersStatePersistenceEnabled != null) {%> --%>
 		<%-- isParametersStatePersistenceEnabled: <%= Boolean.valueOf(parametersStatePersistenceEnabled) %>, --%>
@@ -878,7 +883,7 @@ sbiM.service('sbiModule_helpOnLine', function(sbiModule_config,$mdDialog,sbiModu
 	      	locals:{ 
 	    	  	translate:sbiModule_translate
     		},
-	      	templateUrl : sbiModule_config.contextName + '/js/src/angular_1.4/tools/documentexecution/templates/helpOnLineDialogTemplate.jsp'
+	      	templateUrl : sbiModule_config.dynamicResourcesBasePath + '/angular_1.4/tools/documentexecution/templates/helpOnLineDialogTemplate.jsp'
 	    });
 	};
 	

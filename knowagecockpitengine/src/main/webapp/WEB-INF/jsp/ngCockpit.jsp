@@ -45,8 +45,11 @@ angular.module("cockpitModule").factory("cockpitModule_properties",function(){
 		STARTING_SELECTIONS:[],
 		STARTING_FILTERS:[],
 		CURRENT_SHEET: <%=initialSheet%>,
+		FOLDER_ID: "<%=folderId%>",
 		EXPORT_MODE: <%=exportMode%>,
-		CURRENT_KNOWAGE_VERSION: "<%=it.eng.knowage.wapp.VersionInfo.COMPLETE_VERSION%>"
+		INITIALIZED_WIDGETS : [],
+		DIRTY_WIDGETS : [],
+		CURRENT_KNOWAGE_VERSION: "<%=it.eng.knowage.wapp.Version.getVersionForDatabase()%>"
 	}
 });
 
@@ -102,7 +105,7 @@ angular.module("cockpitModule").factory("cockpitModule_template",function(sbiMod
 
     var cockpitSelections = JSON.parse('<%=initialSelections%>');
 	if(cockpitSelections.aggregations && cockpitSelections.aggregations.length > 0) {
-	    template.configuration.aggregations = cockpitSelections.aggregations;
+	    angular.merge(template.configuration.aggregations, cockpitSelections.aggregations);
 	}
 	if(cockpitSelections.filters && !angular.equals(cockpitSelections.filters, {})) {
     	template.configuration.filters = cockpitSelections.filters;
@@ -187,6 +190,15 @@ angular.module("cockpitModule").factory("cockpitModule_template",function(sbiMod
 			}
 		}
 	}
+
+	for(var i in template.sheets){
+        var sheet = template.sheets[i];
+        for(var j in sheet.widgets){
+            var widget = sheet.widgets[j];
+            cockpitModule_properties.DIRTY_WIDGETS.push(widget.id);
+        }
+    }
+
 	return template;
 });
 
@@ -203,15 +215,11 @@ angular.module("cockpitModule").factory("cockpitModule_analyticalDriversUrls",fu
 var chartLibNamesConfig = <%=ChartEngineUtil.getChartLibNamesConfig()%>;
 
 </script>
-<%-- <link rel="stylesheet" type="text/css" href="${pageContext.request.contextPath}/themes/commons/css/customStyle.css"> --%>
-<%-- <link rel="stylesheet" type="text/css" href="${request.contextPath}/themes/commons/css/customStyle.css"> --%>
-<!-- <link rel="stylesheet" type="text/css" href="/knowage/themes/commons/css/customStyle.css"> -->
-<link rel="stylesheet" type="text/css" href="<%= GeneralUtilities.getSpagoBiContext() %>/themes/commons/css/customStyle.css">
 
 <title>Cockpit engine</title>
 </head> 
 
-		<body class="kn-cockpit " ng-class="{'disableanimation':sbiModule_device.browser.name!='chrome'}" md-no-ink ng-controller="cockpitMasterControllerWrapper" layout="column" style="background-image:url({{imageBackgroundUrl}}); background-color:{{cockpitModule_template.configuration.style.sheetsBackgroundColor||'#fff'}}; background-size:{{cockpitModule_template.configuration.style.imageBackgroundSize||'contain'}}; background-repeat: no-repeat; background-position: center;" >
+		<body class="kn-cockpit " id="kn-cockpit" ng-class="{'disableanimation':sbiModule_device.browser.name!='chrome'}" md-no-ink ng-controller="cockpitMasterControllerWrapper" layout="column" style="background-image:url({{imageBackgroundUrl}}); background-color:{{cockpitModule_template.configuration.style.sheetsBackgroundColor||'#fff'}}; background-size:{{cockpitModule_template.configuration.style.imageBackgroundSize||'contain'}}; background-repeat: no-repeat; background-position: center;" >
 	
 	<cockpit-toolbar config="configurator"></cockpit-toolbar>
 	<cockpit-sheet flex ng-if="datasetLoaded"></cockpit-sheet>

@@ -17,14 +17,14 @@
 			 'sbiModule_config', 'sbiModule_messaging', 'execProperties', 'documentExecuteFactories', 'sbiModule_helpOnLine',
 			 'documentExecuteServices', 'docExecute_urlViewPointService', 'docExecute_paramRolePanelService', 'infoMetadataService', 'sbiModule_download', '$crossNavigationScope',
 			 '$timeout', '$interval', 'docExecute_exportService', '$filter', 'sbiModule_dateServices', 'cockpitEditing', '$window', '$httpParamSerializer', '$mdMenu','sbiModule_i18n','sbiModule_device',
-			 'driversExecutionService','driversDependencyService',documentExecutionControllerFn]);
+			 'driversExecutionService','driversDependencyService', 'datasetPreview_service' ,documentExecutionControllerFn]);
 
 	function documentExecutionControllerFn(
 			$scope, $http, $mdSidenav, $mdDialog,$mdToast, sbiModule_translate, sbiModule_restServices,sbiModule_user, sbiModule_config,
 			sbiModule_messaging, execProperties, documentExecuteFactories, sbiModule_helpOnLine, documentExecuteServices,
 			docExecute_urlViewPointService, docExecute_paramRolePanelService, infoMetadataService, sbiModule_download, $crossNavigationScope,
 			$timeout, $interval, docExecute_exportService, $filter, sbiModule_dateServices,
-			cockpitEditing, $window, $httpParamSerializer, $mdMenu,sbiModule_i18n, sbiModule_device,driversExecutionService,driversDependencyService) {
+			cockpitEditing, $window, $httpParamSerializer, $mdMenu,sbiModule_i18n, sbiModule_device,driversExecutionService,driversDependencyService, datasetPreview_service) {
 
 		console.log("documentExecutionControllerFn IN ");
 
@@ -170,7 +170,7 @@
 					$scope.showSelectRoles = false;
 					//loads parameters if role is selected
 					execProperties.isParameterRolePanelDisabled.status = true;
-					docExecute_urlViewPointService.getParametersForExecution(execProperties.selectedRole.name, driversExecutionService.buildCorrelation,docExecute_urlViewPointService.buildParameterForFirstExecution(execProperties.executionInstance.CROSS_PARAMETER,execProperties.executionInstance.MENU_PARAMETER));
+					docExecute_urlViewPointService.getParametersForExecution(execProperties.selectedRole.name, driversDependencyService.buildCorrelation,docExecute_urlViewPointService.buildParameterForFirstExecution(execProperties.executionInstance.CROSS_PARAMETER,execProperties.executionInstance.MENU_PARAMETER));
 				}else{
 					docExecute_paramRolePanelService.toggleParametersPanel(true);
 				}
@@ -297,7 +297,7 @@
 
 			$mdDialog.show({
 				controller: rankControllerFunction,
-				templateUrl:sbiModule_config.contextName+'/js/src/angular_1.4/tools/documentbrowser/template/documentRank.html',
+				templateUrl:sbiModule_config.dynamicResourcesBasePath+'/angular_1.4/tools/documentbrowser/template/documentRank.html',
 				scope:$scope,
 				preserveScope: true,
 				clickOutsideToClose:true
@@ -403,7 +403,7 @@
 				$mdDialog.show({
 					locals: {publicUrl: urlToSend, embedHTML: embedHTML, isPublic: canExec},
 					//flex: 80,
-					templateUrl: sbiModule_config.contextName+"/js/src/angular_1.4/tools/documentexecution/templates/publicExecutionUrl.html",
+					templateUrl: sbiModule_config.dynamicResourcesBasePath+"/angular_1.4/tools/documentexecution/templates/publicExecutionUrl.html",
 					parent: angular.element(document.body),
 					clickOutsideToClose:true,
 					escapeToClose :true,
@@ -460,8 +460,8 @@
 					};
 				},
 
-				templateUrl : sbiModule_config.contextName
-				+ '/js/src/angular_1.4/tools/documentexecution/templates/documentSendMail.html'
+				templateUrl : sbiModule_config.dynamicResourcesBasePath
+				+ '/angular_1.4/tools/documentexecution/templates/documentSendMail.html'
 			});
 		};
 
@@ -487,7 +487,7 @@
 
 			$mdDialog.show({
 				controller: noteControllerFunction,
-				templateUrl:sbiModule_config.contextName+'/js/src/angular_1.4/tools/documentbrowser/template/documentNote.html',
+				templateUrl:sbiModule_config.dynamicResourcesBasePath+'/angular_1.4/tools/documentbrowser/template/documentNote.html',
 				scope:$scope,
 				preserveScope: true,
 				clickOutsideToClose:true
@@ -559,7 +559,7 @@
 			console.log("changeRole IN ");
 			if(role != execProperties.selectedRole.name) {
 				$crossNavigationScope.changeNavigationRole(execProperties.selectedRole);
-				docExecute_urlViewPointService.getParametersForExecution(role,driversExecutionService.buildCorrelation,docExecute_urlViewPointService.buildParameterForFirstExecution(execProperties.executionInstance.CROSS_PARAMETER,execProperties.executionInstance.MENU_PARAMETER));
+				docExecute_urlViewPointService.getParametersForExecution(role,driversDependencyService.buildCorrelation,docExecute_urlViewPointService.buildParameterForFirstExecution(execProperties.executionInstance.CROSS_PARAMETER,execProperties.executionInstance.MENU_PARAMETER));
 				docExecute_urlViewPointService.frameLoaded=false;
 				if($scope.firstExecutionProcessRestV1){
 					docExecute_urlViewPointService.executionProcesRestV1(role,docExecute_urlViewPointService.buildParameterForFirstExecution(execProperties.executionInstance.CROSS_PARAMETER,execProperties.executionInstance.MENU_PARAMETER));
@@ -656,6 +656,10 @@
             return false;
 		};
 
+		$scope.previewDataset = function(datasetLabel, parameters) {
+			datasetPreview_service.previewDataset(datasetLabel, parameters);
+		}
+
 		$scope.navigateTo= function(outputParameters,inputParameters,targetCrossNavigation,docLabel, otherOutputParameters){
 			$crossNavigationScope.crossNavigationHelper.navigateTo(outputParameters,execProperties.parametersData.documentParameters,targetCrossNavigation,docLabel,otherOutputParameters);
 //			$crossNavigationScope.crossNavigationHelper.navigateTo(outputParameters,inputParameters,targetCrossNavigation,docLabel);
@@ -688,8 +692,8 @@
 					element.on('load', function() {
 						// var iFrameHeight = element[0].parentElement.scrollHeight + 'px';
 						// changed to height 100% because of phantomjs rendering errors
-						element.css('height', '100%');
-						element.css('width', '100%');
+//						element.css('height', '100%');
+//						element.css('width', '100%');
 						if(scope.iframeOnload)
 							scope.iframeOnload();
 					});
@@ -734,6 +738,17 @@ var execExternalCrossNavigation=function(outputParameters,inputParameters,target
 	}
 	parent.navigateTo(outputParameters,inputParameters,targetCrossNavigation,docLabel,otherOutputParameters);
 };
+
+var execPreviewDataset = function(datasetLabel, parameters) {
+	var parent = angular.element(frameElement).scope().$parent;
+	while(parent != undefined){
+		if(parent.previewDataset != undefined){
+			break;
+		}
+		parent = parent.$parent;
+	}
+	parent.previewDataset(datasetLabel, parameters);
+}
 
 var execShowHelpOnLine=function(data){
 	var parent = angular.element(frameElement).scope().$parent;

@@ -15,9 +15,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -->
-<li gridster-item="ngModel" id="w{{ngModel.id}}" ng-cloak ng-class="{'topPosition' : widExp || gridsterItem.gridster.isMobile, 'hasCrossNavigation':ngModel.cross.cross.enable, 'expandedWidget':widExp, 'fixedLeft':ngModel.type === 'selection'}"  ng-mouseleave="closeWidgetActionButtons()"
+<li gridster-item="ngModel" id="w{{ngModel.id}}" ng-cloak ng-class="{'topPosition' : widExp || gridsterItem.gridster.isMobile, 'hasCrossNavigation':ngModel.cross.cross.enable, 'expandedWidget':widExp, 'fixedLeft':ngModel.type === 'selection', 'screenShottingWidget':cockpitModule_properties.LOADING_SCREENSHOT}"  ng-mouseleave="closeWidgetActionButtons()"
 	action-button-position-handler widget-x-position=ngModel.col  action-button-class-container="widgetActionButton">
-	
 	<md-fab-speed-dial md-open="ngModel.menuOpened" md-direction="down" class="showActionButtonHandler md-scale" ng-class="{'noMouse':ngModel.menuOpened==true}" ng-if="!widExp && !( cockpitModule_template.configuration.hideUserMenu && !cockpitModule_properties.EDIT_MODE)">
         <md-fab-trigger ng-if="cockpitModule_properties.EDIT_MODE">
           	<div  class="md-button md-icon-button menuOnTopButton" aria-label="show menu" ng-class="{'dragCursor':ngModel.menuOpened && cockpitModule_properties.EDIT_MODE,'draggableToolbar':ngModel.menuOpened && cockpitModule_properties.EDIT_MODE}">
@@ -28,7 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
         <md-fab-actions>	
 
-			<md-button class="md-icon-button "  aria-label="expand button" ng-if="cockpitModule_properties.EDIT_MODE && (ngModel.type =='table' || ngModel.type =='chart' || ngModel.type =='pivot' || ngModel.type == 'document')" ng-click="expandWidget();$event.stopPropagation();" >
+			<md-button class="md-icon-button "  aria-label="expand button" ng-if="cockpitModule_properties.EDIT_MODE && (ngModel.type =='table' || ngModel.type =='chart' || ngModel.type =='static-pivot-table' || ngModel.type == 'document')" ng-click="expandWidget();$event.stopPropagation();" >
 				<md-tooltip md-direction="top" md-delay="1000">{{::translate.load("sbi.cockpit.editor.widget.widgeteditorgenericconfpanel.expandall")}}</md-tooltip>
 				<md-icon md-font-icon="fa" ng-class="{'fa-compress':widExp ,' fa-expand':!widExp }"></md-icon>
 			</md-button>
@@ -150,7 +149,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 				<md-icon md-font-icon="fa fa-eraser"></md-icon>
 			</md-button-->
 			
-			<md-button class="md-icon-button "  ng-click="expandWidget();$event.stopPropagation();" ng-if="ngModel.type=='table' || ngModel.type=='chart' || ngModel.type=='pivot'">
+			<md-button class="md-icon-button "  ng-click="expandWidget();$event.stopPropagation();" ng-if="ngModel.type=='table' || ngModel.type=='chart' || ngModel.type=='static-pivot-table'">
 				<md-tooltip md-direction="bottom" ng-if="!widExp" md-delay="1000">{{::translate.load("sbi.cockpit.editor.widget.widgeteditorgenericconfpanel.expandall")}}</md-tooltip>
 				<md-tooltip md-direction="bottom" ng-if="widExp" md-delay="1000">{{::translate.load("sbi.cockpit.editor.widget.widgeteditorgenericconfpanel.collapse")}}</md-tooltip>
 				<md-icon md-font-icon="fa" ng-class="{'fa-compress':widExp ,' fa-expand':!widExp }"></md-icon>
@@ -192,7 +191,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 		</div>
 			
 		</div>
-			<md-card-content flex="" layout="column" class="noPadding" id="{{ngModel.id}}" layout-fill>
+			<md-card-content flex="" layout="column" class="noPadding" id="{{ngModel.id}}" layout-fill ng-style="paddingStyle">
 			</md-card-content>
 	</md-card>
 	
